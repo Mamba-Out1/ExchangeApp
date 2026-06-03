@@ -1,0 +1,13 @@
+# Local Properties Configuration Template
+# Copy this file to local.properties and fill in your API keys
+# DO NOT commit local.properties to version control
+
+## SDK Location (if needed)
+# sdk.dir=/path/to/Android/sdk
+
+## OpenAI API Configuration
+# Required: Your OpenAI API Key
+OPENAI_API_KEY=sk-your-api-key-here
+
+# Optional: OpenAI API Endpoint (default: https://api.openai.com)
+OPENAI_API_ENDPOINT=https://api.openai.com
