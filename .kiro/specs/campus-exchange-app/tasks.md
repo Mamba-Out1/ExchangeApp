@@ -21,7 +21,7 @@
     - 定义ItemStatus、OrderStatus、MessageType等枚举类型
     - _Requirements: 5.2, 7.2, 8.2, 9.3, 10.1_
    
-  - [ ] 2.2 创建Room Database Entities和Converters
+  - [x] 2.2 创建Room Database Entities和Converters
     - 实现ItemEntity、UserEntity、OrderEntity、ChatMessageEntity、UserInteractionEntity
     - 实现Converters类处理类型转换(JSON序列化、时间戳转换)
     - _Requirements: 2.1, 2.2, 2.3_
