@@ -16,7 +16,7 @@
   - _Requirements: 1.1, 13.1_
 
 - [ ] 2. 实现数据层基础设施
-  - [ ] 2.1 创建Domain Models
+  - [x] 2.1 创建Domain Models
     - 实现Item、User、Order、ChatMessage、Location、UserInteraction等数据模型
     - 定义ItemStatus、OrderStatus、MessageType等枚举类型
     - _Requirements: 5.2, 7.2, 8.2, 9.3, 10.1_
