@@ -15,7 +15,7 @@
   - 配置Hilt依赖注入
   - _Requirements: 1.1, 13.1_
 
-- [ ] 2. 实现数据层基础设施
+- [x] 2. 实现数据层基础设施
   - [x] 2.1 创建Domain Models
     - 实现Item、User、Order、ChatMessage、Location、UserInteraction等数据模型
     - 定义ItemStatus、OrderStatus、MessageType等枚举类型
@@ -26,7 +26,7 @@
     - 实现Converters类处理类型转换(JSON序列化、时间戳转换)
     - _Requirements: 2.1, 2.2, 2.3_
   
-  - [ ] 2.3 实现Room DAOs
+  - [x] 2.3 实现Room DAOs
     - 实现ItemDao(查询、插入、更新、删除物品)
     - 实现UserDao(用户CRUD操作)
     - 实现OrderDao(订单管理)
@@ -34,31 +34,31 @@
     - 实现UserInteractionDao(用户交互记录)
     - _Requirements: 2.4, 2.5, 2.6, 9.3_
   
-  - [ ] 2.4 创建AppDatabase类
+  - [x] 2.4 创建AppDatabase类
     - 配置Room数据库(版本、实体、类型转换器)
     - 定义数据库访问接口
     - _Requirements: 2.1, 2.7_
   
-  - [ ]* 2.5 编写数据序列化Property Test
+  - [x] 2.5 编写数据序列化Property Test
     - **Property 8: Item序列化Round-Trip属性**
     - **验证需求: Requirements 12.5**
     - 测试Item对象序列化和反序列化的等价性
     - _Requirements: 12.5_
 
-- [ ] 3. 实现OpenAI API集成
-  - [ ] 3.1 创建OpenAI API接口和DTO
+- [x] 3. 实现OpenAI API集成
+  - [x] 3.1 创建OpenAI API接口和DTO
     - 定义OpenAIApiService接口
     - 实现ImageAnalysisRequest、Message、Content、ImageUrl等请求DTO
     - 实现ImageAnalysisResponse、Choice、MessageResponse等响应DTO
     - _Requirements: 1.1, 1.2_
   
-  - [ ] 3.2 实现Retrofit配置和拦截器
+  - [x] 3.2 实现Retrofit配置和拦截器
     - 配置Retrofit客户端(超时、日志、JSON解析)
     - 实现OpenAIRetryInterceptor(重试机制,指数退避)
     - 实现API密钥注入
     - _Requirements: 13.1, 13.2, 13.5, 13.6_
   
-  - [ ] 3.3 实现AIRepository
+  - [x] 3.3 实现AIRepository
     - 实现recognizeItem方法(调用GPT-4V API识别物品)
     - 实现parseRecognitionResult方法(解析JSON响应)
     - 实现错误处理和降级策略
