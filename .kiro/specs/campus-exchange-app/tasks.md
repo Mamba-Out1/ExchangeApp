@@ -64,7 +64,7 @@
     - 实现错误处理和降级策略
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6_
   
-  - [ ]* 3.4 编写JSON解析Property Test
+  - [ ] 3.4 编写JSON解析Property Test
     - **Property 9: JSON解析错误鲁棒性**
     - **验证需求: Requirements 12.3**
     - 测试畸形JSON的错误处理
