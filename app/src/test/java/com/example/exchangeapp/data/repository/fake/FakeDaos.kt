@@ -232,4 +232,16 @@ class FakeUserInteractionDao : UserInteractionDao {
 /** 可配置的 [CurrentUserProvider] 假实现。 */
 class FakeCurrentUserProvider(var userId: String?) : CurrentUserProvider {
     override fun getCurrentUserId(): String? = userId
+    
+    override fun setCurrentUserId(userId: String?) {
+        this.userId = userId
+    }
+    
+    override fun clearCurrentUser() {
+        this.userId = null
+    }
+    
+    override fun hasValidLogin(): Boolean {
+        return userId != null
+    }
 }

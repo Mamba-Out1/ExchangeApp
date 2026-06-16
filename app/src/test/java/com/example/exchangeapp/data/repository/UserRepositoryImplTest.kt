@@ -25,11 +25,13 @@ class UserRepositoryImplTest {
     private fun sampleUser(
         id: String = "user-1",
         phone: String = "13800000000",
-        avatar: String? = "avatar.png"
+        avatar: String? = "avatar.png",
+        passwordHash: String? = "password123".hashCode().toString()
     ) = User(
         id = id,
         phone = phone,
         nickname = "小明",
+        passwordHash = passwordHash,
         avatar = avatar,
         campusLocation = "校区A",
         createdAt = 1234L

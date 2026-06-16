@@ -1,14 +1,33 @@
 package com.example.exchangeapp.di
 
+import android.content.Context
 import com.example.exchangeapp.BuildConfig
+import com.example.exchangeapp.data.local.dao.ChatDao
+import com.example.exchangeapp.data.local.dao.ItemDao
+import com.example.exchangeapp.data.local.dao.OrderDao
+import com.example.exchangeapp.data.local.dao.UserDao
+import com.example.exchangeapp.data.local.dao.UserInteractionDao
+import com.example.exchangeapp.data.local.database.AppDatabase
 import com.example.exchangeapp.data.remote.api.OpenAIApiService
 import com.example.exchangeapp.data.remote.interceptor.OpenAIRetryInterceptor
 import com.example.exchangeapp.data.repository.AIRepository
 import com.example.exchangeapp.data.repository.AIRepositoryImpl
+import com.example.exchangeapp.data.repository.ChatRepositoryImpl
+import com.example.exchangeapp.data.repository.ItemRepositoryImpl
+import com.example.exchangeapp.data.repository.OrderRepositoryImpl
+import com.example.exchangeapp.data.repository.UserInteractionRepositoryImpl
+import com.example.exchangeapp.data.repository.UserRepositoryImpl
+import com.example.exchangeapp.domain.repository.ChatRepository
+import com.example.exchangeapp.domain.repository.ItemRepository
+import com.example.exchangeapp.domain.repository.OrderRepository
+import com.example.exchangeapp.domain.repository.UserInteractionRepository
+import com.example.exchangeapp.domain.repository.UserRepository
+import com.example.exchangeapp.domain.service.CurrentUserProvider
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -19,10 +38,10 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 /**
- * Hilt module for application-level dependencies.
- * This module provides app-wide singleton instances.
+ * 应用级依赖模块
+ * 提供应用范围的配置依赖，如JSON序列化器、API配置等
  * 
- * **验证需求: Requirements 13.1, 13.2, 13.5, 13.6**
+ * **验证需求: Requirements 13.1**
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -86,111 +105,5 @@ object AppModule {
                 HttpLoggingInterceptor.Level.NONE
             }
         }
-    }
-    
-    /**
-     * Provides OpenAI retry interceptor with exponential backoff.
-     * 
-     * 重试策略:
-     * - 最多重试3次
-     * - 对429 (Rate Limit)和5xx错误重试
-     * - 指数退避: 1秒 -> 2秒 -> 4秒
-     * 
-     * **验证需求: Requirements 13.5, 13.6**
-     */
-    @Provides
-    @Singleton
-    fun provideRetryInterceptor(): OpenAIRetryInterceptor {
-        return OpenAIRetryInterceptor()
-    }
-    
-    /**
-     * Provides OkHttpClient with configured interceptors and timeouts.
-     * 
-     * 配置:
-     * - 连接超时: 10秒
-     * - 读取超时: 10秒
-     * - 写入超时: 10秒
-     * - API密钥注入: 自动添加Authorization header
-     * - 重试机制: OpenAIRetryInterceptor
-     * - 日志记录: HttpLoggingInterceptor
-     * 
-     * **验证需求: Requirements 13.1, 13.2**
-     */
-    @Provides
-    @Singleton
-    fun provideOkHttpClient(
-        apiKey: String,
-        retryInterceptor: OpenAIRetryInterceptor,
-        loggingInterceptor: HttpLoggingInterceptor
-    ): OkHttpClient {
-        return OkHttpClient.Builder()
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(10, TimeUnit.SECONDS)
-            .writeTimeout(10, TimeUnit.SECONDS)
-            .addInterceptor { chain ->
-                // API密钥注入拦截器
-                val originalRequest = chain.request()
-                val requestWithAuth = originalRequest.newBuilder()
-                    .header("Authorization", "Bearer $apiKey")
-                    .build()
-                chain.proceed(requestWithAuth)
-            }
-            .addInterceptor(retryInterceptor)
-            .addInterceptor(loggingInterceptor)
-            .build()
-    }
-    
-    /**
-     * Provides Retrofit instance configured for OpenAI API.
-     * 
-     * 配置:
-     * - Base URL: 从BuildConfig读取
-     * - JSON转换器: kotlinx.serialization
-     * - HTTP客户端: 带拦截器和超时配置的OkHttpClient
-     * 
-     * **验证需求: Requirements 13.1, 13.2**
-     */
-    @Provides
-    @Singleton
-    fun provideRetrofit(
-        okHttpClient: OkHttpClient,
-        json: Json,
-        apiEndpoint: String
-    ): Retrofit {
-        val contentType = "application/json".toMediaType()
-        
-        return Retrofit.Builder()
-            .baseUrl(apiEndpoint)
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-    }
-    
-    /**
-     * Provides OpenAI API service interface.
-     * 
-     * 提供OpenAI GPT-4V API的网络接口实现
-     */
-    @Provides
-    @Singleton
-    fun provideOpenAIApiService(retrofit: Retrofit): OpenAIApiService {
-        return retrofit.create(OpenAIApiService::class.java)
-    }
-    
-    /**
-     * Provides AIRepository implementation.
-     * 
-     * 提供AI识别Repository的实现，用于调用OpenAI API进行物品识别
-     * 
-     * **验证需求: Requirements 1.1, 1.2, 1.3, 1.4, 1.5, 1.6**
-     */
-    @Provides
-    @Singleton
-    fun provideAIRepository(
-        apiService: OpenAIApiService,
-        apiKey: String
-    ): AIRepository {
-        return AIRepositoryImpl(apiService, apiKey)
     }
 }

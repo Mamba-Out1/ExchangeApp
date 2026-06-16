@@ -46,6 +46,7 @@ class UserRepositoryImpl @Inject constructor(
             id = id,
             phone = phone,
             nickname = nickname,
+            passwordHash = passwordHash,
             avatar = avatar,
             campusLocation = campusLocation,
             createdAt = createdAt
@@ -60,6 +61,7 @@ class UserRepositoryImpl @Inject constructor(
             id = id,
             phone = phone,
             nickname = nickname,
+            passwordHash = passwordHash,
             avatar = avatar,
             campusLocation = campusLocation,
             createdAt = createdAt

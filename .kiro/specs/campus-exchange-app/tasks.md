@@ -202,7 +202,7 @@
     - 测试错误处理路径
     - _Requirements: 2.8_
 
-- [ ] 10. 实现Use Cases
+- [x] 10. 实现Use Cases
   - [x] 10.1 创建AI识别Use Case
     - 实现RecognizeItemImageUseCase
     - 处理图片Base64编码
@@ -235,7 +235,7 @@
     - 实现MarkMessagesAsReadUseCase
     - _Requirements: 9.4, 9.6_
   
-  - [ ] 10.7 创建收藏Use Cases
+  - [x] 10.7 创建收藏Use Cases
     - 实现ToggleFavoriteUseCase
     - _Requirements: 10.1, 10.2, 10.4_
   
@@ -244,8 +244,8 @@
     - 测试边界条件
     - _Requirements: 所有相关需求_
 
-- [ ] 11. 实现表单验证
-  - [ ] 11.1 创建ItemFormValidator
+- [x] 11. 实现表单验证
+  - [x] 11.1 创建ItemFormValidator
     - 实现validate方法验证物品表单数据
     - 验证必填字段(name、description、price、images)
     - 返回ValidationException包含所有缺失字段
@@ -266,19 +266,19 @@
   - 确保所有测试通过,如有疑问请询问用户
 
 - [ ] 13. 配置依赖注入(Hilt)
-  - [ ] 13.1 创建Application类和Hilt配置
+  - [x] 13.1 创建Application类和Hilt配置
     - 使用@HiltAndroidApp注解Application
     - 创建DatabaseModule提供AppDatabase和DAOs
     - 创建NetworkModule提供Retrofit、OkHttpClient、OpenAIApiService
     - 创建RepositoryModule提供Repository实现
     - _Requirements: 所有模块_
   
-  - [ ] 13.2 创建Use Case Module
+  - [x] 13.2 创建Use Case Module
     - 提供所有Use Case的依赖注入
     - _Requirements: 所有Use Cases_
 
 - [ ] 14. 实现ViewModel层
-  - [ ] 14.1 实现LoginViewModel
+  - [x] 14.1 实现LoginViewModel
     - 处理用户登录逻辑
     - 管理登录状态(StateFlow)
     - 调用UserRepository验证凭证
