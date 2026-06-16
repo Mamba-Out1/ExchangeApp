@@ -4,9 +4,11 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import okhttp3.Interceptor
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -181,6 +183,7 @@ class OpenAIRetryInterceptorTest {
             .protocol(Protocol.HTTP_1_1)
             .code(code)
             .message("Test Response")
+            .body("{}".toResponseBody("application/json".toMediaType()))
             .build()
     }
 }

@@ -64,22 +64,22 @@
     - 实现错误处理和降级策略
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6_
   
-  - [ ] 3.4 编写JSON解析Property Test
+  - [x] 3.4 编写JSON解析Property Test
     - **Property 9: JSON解析错误鲁棒性**
     - **验证需求: Requirements 12.3**
     - 测试畸形JSON的错误处理
     - _Requirements: 12.3_
   
-  - [ ]* 3.5 编写API集成测试
+  - [x] 3.5 编写API集成测试
     - 使用MockWebServer模拟OpenAI API响应
     - 测试成功场景和错误场景
     - _Requirements: 1.7, 13.3, 13.7_
 
-- [ ] 4. Checkpoint - 验证数据层和API集成
+- [x] 4. Checkpoint - 验证数据层和API集成
   - 确保所有测试通过,如有疑问请询问用户
 
-- [ ] 5. 实现位置服务
-  - [ ] 5.1 实现LocationService接口和实现类
+- [x] 5. 实现位置服务
+  - [x] 5.1 实现LocationService接口和实现类
     - 实现getCurrentLocation方法(使用FusedLocationProviderClient)
     - 实现calculateDistance方法(使用Location.distanceBetween)
     - 实现formatDistance方法(格式化为"XX米"或"XX公里")
@@ -101,8 +101,8 @@
     - 测试定位超时场景
     - _Requirements: 15.6_
 
-- [ ] 6. 实现推荐引擎
-  - [ ] 6.1 创建RecommendationEngine接口和实现类
+- [x] 6. 实现推荐引擎
+  - [x] 6.1 创建RecommendationEngine接口和实现类
     - 实现getRecommendedItems方法
     - 实现calculateRecommendationScore方法(距离、点击、收藏权重)
     - 实现calculateDistanceScore辅助方法
@@ -125,8 +125,8 @@
     - 测试最大距离场景
     - _Requirements: 3.8_
 
-- [ ] 7. 实现匹配系统
-  - [ ] 7.1 创建MatchingSystem接口和实现类
+- [x] 7. 实现匹配系统
+  - [x] 7.1 创建MatchingSystem接口和实现类
     - 实现getMatchedItems方法
     - 实现calculateMatchingScore方法(标签和关键词权重)
     - 实现calculateTagSimilarity方法(Jaccard相似度)
@@ -158,79 +158,79 @@
 - [ ] 8. Checkpoint - 验证核心算法逻辑
   - 确保所有测试通过,如有疑问请询问用户
 
-- [ ] 9. 实现Repository层
-  - [ ] 9.1 定义Repository接口
+- [x] 9. 实现Repository层
+  - [x] 9.1 定义Repository接口
     - 定义ItemRepository接口(物品CRUD、搜索、过滤)
     - 定义UserRepository接口(用户管理)
     - 定义ChatRepository接口(聊天消息、会话管理)
     - 定义OrderRepository接口(订单管理)
     - 定义UserInteractionRepository接口(交互记录)
-    - _Requirements: 5.1, 7.3, 8.2, 9.2, 10.1_
+    - _Requirements: 5.1, 7.3,1, 9.2, 10.1_
   
-  - [ ] 9.2 实现ItemRepositoryImpl
+  - [x] 9.2 实现ItemRepositoryImpl
     - 实现getAllItems、getItemById、getItemsByUserId等方法
     - 实现insertItem、updateItem、deleteItem方法
     - 实现getItemsByTag方法
     - 实现Entity与Model的转换逻辑
     - _Requirements: 5.1, 5.2, 5.3, 14.4, 14.5_
   
-  - [ ] 9.3 实现UserRepositoryImpl
+  - [x] 9.3 实现UserRepositoryImpl
     - 实现getUserById、getUserByPhone方法
     - 实现insertUser、updateUser方法
     - _Requirements: 7.2, 11.3, 11.4_
   
-  - [ ] 9.4 实现ChatRepositoryImpl
+  - [x] 9.4 实现ChatRepositoryImpl
     - 实现getConversation、sendMessage方法
     - 实现markAsRead方法
     - 实现observeConversation方法(返回Flow)
     - 实现generateConversationId辅助方法
     - _Requirements: 9.3, 9.4, 9.5, 9.7_
   
-  - [ ] 9.5 实现OrderRepositoryImpl
+  - [x] 9.5 实现OrderRepositoryImpl
     - 实现getOrdersByUserId、getOrderById方法
     - 实现insertOrder、updateOrder方法
     - _Requirements: 8.2, 8.4_
   
-  - [ ] 9.6 实现UserInteractionRepositoryImpl
+  - [x] 9.6 实现UserInteractionRepositoryImpl
     - 实现getUserInteractions、getInteraction方法
     - 实现insertOrUpdateInteraction、incrementClickCount方法
     - _Requirements: 3.5, 3.6, 10.4_
   
-  - [ ]* 9.7 编写Repository层单元测试
+  - [x] 9.7 编写Repository层单元测试
     - 使用fake DAO实现测试Repository
-    - 测试数据转换逻辑
+    - 测试数据转换逻辑       
     - 测试错误处理路径
     - _Requirements: 2.8_
 
 - [ ] 10. 实现Use Cases
-  - [ ] 10.1 创建AI识别Use Case
+  - [x] 10.1 创建AI识别Use Case
     - 实现RecognizeItemImageUseCase
     - 处理图片Base64编码
     - 调用AIRepository并返回Result
     - _Requirements: 1.1, 1.6_
   
-  - [ ] 10.2 创建推荐Use Case
+  - [x] 10.2 创建推荐Use Case
     - 实现GetRecommendedItemsUseCase
     - 调用RecommendationEngine并使用ItemRepository
     - _Requirements: 3.1, 3.4_
   
-  - [ ] 10.3 创建匹配Use Case
+  - [x] 10.3 创建匹配Use Case
     - 实现GetMatchedItemsUseCase
     - 调用MatchingSystem
     - _Requirements: 4.5, 4.8_
   
-  - [ ] 10.4 创建距离计算Use Case
+  - [x] 10.4 创建距离计算Use Case
     - 实现CalculateDistanceUseCase
     - 调用LocationService
     - _Requirements: 15.3, 15.4_
   
-  - [ ] 10.5 创建物品管理Use Cases
+  - [x] 10.5 创建物品管理Use Cases
     - 实现SaveItemUseCase(保存或更新物品)
     - 实现DeleteItemUseCase(删除物品)
     - 实现GetItemDetailsUseCase(获取物品详情)
     - _Requirements: 5.3, 6.1, 7.5_
   
-  - [ ] 10.6 创建消息Use Cases
+  - [x] 10.6 创建消息Use Cases
     - 实现SendMessageUseCase
     - 实现MarkMessagesAsReadUseCase
     - _Requirements: 9.4, 9.6_

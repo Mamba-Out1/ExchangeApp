@@ -39,7 +39,7 @@ class AIRepositoryImpl @Inject constructor(
 ) : AIRepository {
     
     companion object {
-        private const val RECOGNITION_PROMPT = """
+        private val RECOGNITION_PROMPT = """
 请识别这个物品并返回JSON格式的信息，包含以下字段：
 - name: 物品名称（字符串）
 - description: 物品描述（字符串，50-200字）
@@ -160,8 +160,10 @@ class AIRepositoryImpl @Inject constructor(
      * 
      * @param jsonString OpenAI API返回的JSON字符串
      * @return Result包含解析后的ItemRecognitionResult或错误信息
+     *
+     * 注: 标记为internal以便在单元测试中验证JSON解析的错误鲁棒性(Property 9)
      */
-    private fun parseRecognitionResult(jsonString: String): Result<ItemRecognitionResult> {
+    internal fun parseRecognitionResult(jsonString: String): Result<ItemRecognitionResult> {
         return try {
             // 清理可能存在的markdown代码块标记
             val cleanedJson = jsonString

@@ -66,6 +66,7 @@ object AppModule {
         return Json {
             ignoreUnknownKeys = true
             isLenient = true
+            encodeDefaults = true
         }
     }
     
