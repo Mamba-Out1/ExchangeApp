@@ -284,7 +284,7 @@
     - 调用UserRepository验证凭证
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7_
   
-  - [ ] 14.2 实现HomeViewModel
+  - [x] 14.2 实现HomeViewModel
     - 管理物品列表状态
     - 实现分页加载(loadMore方法)
     - 实现下拉刷新(refresh方法)
@@ -292,14 +292,14 @@
     - 处理收藏操作(调用ToggleFavoriteUseCase)
     - _Requirements: 5.1, 5.2, 5.4, 5.5, 5.6, 10.1, 10.2_
   
-  - [ ] 14.3 实现ItemDetailViewModel
+  - [x] 14.3 实现ItemDetailViewModel
     - 获取物品详情(调用GetItemDetailsUseCase)
     - 获取匹配物品(调用GetMatchedItemsUseCase)
     - 处理收藏状态切换
     - 处理联系卖家操作
     - _Requirements: 4.5, 5.3, 10.3_
   
-  - [ ] 14.4 实现PostItemViewModel
+  - [x] 14.4 实现PostItemViewModel
     - 管理物品发布表单状态
     - 处理图片上传(Base64编码)
     - 调用RecognizeItemImageUseCase识别物品
@@ -307,19 +307,19 @@
     - 调用SaveItemUseCase保存物品
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8_
   
-  - [ ] 14.5 实现ProfileViewModel
+  - [x] 14.5 实现ProfileViewModel
     - 获取用户信息
     - 获取用户发布的物品列表
     - 获取收藏列表
     - 处理编辑和删除物品操作
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7_
   
-  - [ ] 14.6 实现OrderListViewModel
+  - [x] 14.6 实现OrderListViewModel
     - 获取用户订单列表
     - 处理订单状态更新(确认、取消)
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
   
-  - [ ] 14.7 实现ChatViewModel
+  - [x] 14.7 实现ChatViewModel
     - 观察聊天消息(使用Flow)
     - 发送文字消息(调用SendMessageUseCase)
     - 发送图片消息
@@ -332,8 +332,8 @@
     - 测试状态管理逻辑
     - _Requirements: 所有UI相关需求_
 
-- [ ] 15. 实现UI层 - 通用组件
-  - [ ] 15.1 创建通用Composable组件
+- [x] 15. 实现UI层 - 通用组件
+  - [x] 15.1 创建通用Composable组件
     - ItemCard组件(显示物品卡片)
     - ItemImageCarousel组件(图片轮播)
     - EmptyStateView组件(空状态视图)
@@ -341,7 +341,7 @@
     - ErrorView组件(错误提示)
     - _Requirements: 5.2, 5.7_
   
-  - [ ] 15.2 创建Navigation组件
+  - [x] 15.2 创建Navigation组件
     - 定义导航图(NavHost)
     - 定义路由常量
     - 实现底部导航栏(BottomNavigationBar)
