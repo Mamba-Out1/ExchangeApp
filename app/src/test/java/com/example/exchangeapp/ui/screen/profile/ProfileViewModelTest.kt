@@ -14,13 +14,18 @@ import com.example.exchangeapp.domain.service.CurrentUserProvider
 import com.example.exchangeapp.domain.usecase.DeleteItemUseCase
 import com.example.exchangeapp.domain.usecase.GetItemDetailsUseCase
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -47,6 +52,7 @@ class ProfileViewModelTest {
 
     @BeforeEach
     fun setup() {
+        Dispatchers.setMain(testDispatcher)
         mockCurrentUserProvider = mockk()
         mockUserRepository = mockk()
         mockItemRepository = mockk()
@@ -54,9 +60,17 @@ class ProfileViewModelTest {
         mockOrderRepository = mockk()
         mockDeleteItemUseCase = mockk()
         mockGetItemDetailsUseCase = mockk()
-        
-        // 使用测试Dispatcher创建ViewModel
-        viewModel = ProfileViewModel(
+        // 注意：ViewModel在每个测试中按需创建。
+        // ProfileViewModel的init{}会立即调用loadProfileData()，因此必须在配置好mock桩之后再构造，
+        // 否则init阶段会命中未打桩的mock。
+    }
+
+    /**
+     * 在配置好mock桩之后创建ViewModel。
+     * 由于ProfileViewModel在init{}中触发数据加载，必须在每个测试设置好桩之后调用。
+     */
+    private fun createViewModel(): ProfileViewModel {
+        return ProfileViewModel(
             mockCurrentUserProvider,
             mockUserRepository,
             mockItemRepository,
@@ -67,14 +81,18 @@ class ProfileViewModelTest {
         )
     }
 
+    @AfterEach
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     @Test
     fun `未登录时应显示错误状态`() = runTest {
         // Given: 用户未登录
         every { mockCurrentUserProvider.getCurrentUserId() } returns null
 
         // When: ViewModel初始化（自动调用loadProfileData）
-        // 等待ViewModel初始化完成
-        testScope.backgroundScope.coroutineContext
+        viewModel = createViewModel()
 
         // Then: 所有状态都应为错误状态
         assertTrue(viewModel.userState.value is UserState.Error)
@@ -104,8 +122,7 @@ class ProfileViewModelTest {
         coEvery { mockOrderRepository.getOrdersByUserId(userId) } returns emptyList()
 
         // When: ViewModel初始化（自动调用loadProfileData）
-        // 等待ViewModel初始化完成
-        testScope.backgroundScope.coroutineContext
+        viewModel = createViewModel()
 
         // Then: 用户状态应为成功状态
         assertTrue(viewModel.userState.value is UserState.Success)
@@ -121,26 +138,28 @@ class ProfileViewModelTest {
             Item(
                 id = "item-1",
                 userId = userId,
-                title = "测试物品1",
+                name = "测试物品1",
                 description = "测试描述1",
-                imageUrls = listOf("url1"),
+                estimatedPrice = 100.0,
+                images = listOf("url1"),
                 tags = listOf("电子产品"),
-                price = 100.0,
                 status = com.example.exchangeapp.domain.model.ItemStatus.AVAILABLE,
-                location = com.example.exchangeapp.domain.model.Location(31.23, 121.47),
-                createdAt = 1000L
+                location = com.example.exchangeapp.domain.model.Location(31.23, 121.47, null),
+                createdAt = 1000L,
+                updatedAt = 1000L
             ),
             Item(
                 id = "item-2",
                 userId = userId,
-                title = "测试物品2",
+                name = "测试物品2",
                 description = "测试描述2",
-                imageUrls = listOf("url2"),
+                estimatedPrice = 50.0,
+                images = listOf("url2"),
                 tags = listOf("书籍"),
-                price = 50.0,
                 status = com.example.exchangeapp.domain.model.ItemStatus.AVAILABLE,
-                location = com.example.exchangeapp.domain.model.Location(31.24, 121.48),
-                createdAt = 2000L
+                location = com.example.exchangeapp.domain.model.Location(31.24, 121.48, null),
+                createdAt = 2000L,
+                updatedAt = 2000L
             )
         )
         
@@ -151,7 +170,7 @@ class ProfileViewModelTest {
         coEvery { mockOrderRepository.getOrdersByUserId(userId) } returns emptyList()
 
         // When: ViewModel初始化
-        testScope.backgroundScope.coroutineContext
+        viewModel = createViewModel()
 
         // Then: 发布物品状态应为成功状态
         assertTrue(viewModel.publishedItemsState.value is PublishedItemsState.Success)
@@ -167,14 +186,15 @@ class ProfileViewModelTest {
         val favoriteItem = Item(
             id = favoriteItemId,
             userId = "other-user",
-            title = "收藏物品",
+            name = "收藏物品",
             description = "收藏描述",
-            imageUrls = listOf("fav-url"),
+            estimatedPrice = 200.0,
+            images = listOf("fav-url"),
             tags = listOf("电子产品"),
-            price = 200.0,
             status = com.example.exchangeapp.domain.model.ItemStatus.AVAILABLE,
-            location = com.example.exchangeapp.domain.model.Location(31.25, 121.49),
-            createdAt = 3000L
+            location = com.example.exchangeapp.domain.model.Location(31.25, 121.49, null),
+            createdAt = 3000L,
+            updatedAt = 3000L
         )
         
         val userInteractions = UserInteractions(
@@ -197,7 +217,7 @@ class ProfileViewModelTest {
         coEvery { mockOrderRepository.getOrdersByUserId(userId) } returns emptyList()
 
         // When: ViewModel初始化
-        testScope.backgroundScope.coroutineContext
+        viewModel = createViewModel()
 
         // Then: 收藏物品状态应为成功状态
         assertTrue(viewModel.favoriteItemsState.value is FavoriteItemsState.Success)
@@ -218,6 +238,7 @@ class ProfileViewModelTest {
                 user2Id = "user-2",
                 status = OrderStatus.COMPLETED,
                 createdAt = 1000L,
+                updatedAt = 2000L,
                 completedAt = 2000L
             ),
             Order(
@@ -228,6 +249,7 @@ class ProfileViewModelTest {
                 user2Id = userId,
                 status = OrderStatus.PENDING,
                 createdAt = 3000L,
+                updatedAt = 3000L,
                 completedAt = null
             ),
             Order(
@@ -238,6 +260,7 @@ class ProfileViewModelTest {
                 user2Id = "user-4",
                 status = OrderStatus.COMPLETED,
                 createdAt = 4000L,
+                updatedAt = 5000L,
                 completedAt = 5000L
             )
         )
@@ -249,7 +272,7 @@ class ProfileViewModelTest {
         coEvery { mockOrderRepository.getOrdersByUserId(userId) } returns testOrders
 
         // When: ViewModel初始化
-        testScope.backgroundScope.coroutineContext
+        viewModel = createViewModel()
 
         // Then: 订单数量状态应为成功状态，且数量为2（两个COMPLETED订单）
         assertTrue(viewModel.orderCountState.value is OrderCountState.Success)
@@ -268,18 +291,22 @@ class ProfileViewModelTest {
         coEvery { mockItemRepository.getItemsByUserId(userId) } returns emptyList()
 
         // When: 调用deleteItem
+        viewModel = createViewModel()
         viewModel.deleteItem(itemId)
 
         // Then: 应调用DeleteItemUseCase
-        coEvery { mockDeleteItemUseCase(itemId) } was called
+        coVerify { mockDeleteItemUseCase(itemId) }
     }
 
     @Test
     fun `编辑物品应触发导航状态`() = runTest {
         // Given: 要编辑物品
         val itemId = "item-to-edit"
+        // init会调用loadProfileData，提供默认桩使其走未登录分支（不触发仓库调用）
+        every { mockCurrentUserProvider.getCurrentUserId() } returns null
 
         // When: 调用editItem
+        viewModel = createViewModel()
         viewModel.editItem(itemId)
 
         // Then: 操作状态应为NavigateToEdit
@@ -292,8 +319,11 @@ class ProfileViewModelTest {
     fun `查看收藏物品应触发导航状态`() = runTest {
         // Given: 要查看收藏物品
         val itemId = "item-to-view"
+        // init会调用loadProfileData，提供默认桩使其走未登录分支（不触发仓库调用）
+        every { mockCurrentUserProvider.getCurrentUserId() } returns null
 
         // When: 调用viewFavoriteItem
+        viewModel = createViewModel()
         viewModel.viewFavoriteItem(itemId)
 
         // Then: 操作状态应为NavigateToItemDetail

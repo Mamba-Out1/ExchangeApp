@@ -57,7 +57,7 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(
-        apiKey: String,
+        @ApiKey apiKey: String,
         retryInterceptor: OpenAIRetryInterceptor,
         loggingInterceptor: HttpLoggingInterceptor
     ): OkHttpClient {
@@ -93,7 +93,7 @@ object NetworkModule {
     fun provideRetrofit(
         okHttpClient: OkHttpClient,
         json: Json,
-        apiEndpoint: String
+        @ApiEndpoint apiEndpoint: String
     ): Retrofit {
         val contentType = "application/json".toMediaType()
         

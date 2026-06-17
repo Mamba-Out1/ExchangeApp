@@ -1,40 +1,12 @@
 package com.example.exchangeapp.di
 
-import android.content.Context
 import com.example.exchangeapp.BuildConfig
-import com.example.exchangeapp.data.local.dao.ChatDao
-import com.example.exchangeapp.data.local.dao.ItemDao
-import com.example.exchangeapp.data.local.dao.OrderDao
-import com.example.exchangeapp.data.local.dao.UserDao
-import com.example.exchangeapp.data.local.dao.UserInteractionDao
-import com.example.exchangeapp.data.local.database.AppDatabase
-import com.example.exchangeapp.data.remote.api.OpenAIApiService
-import com.example.exchangeapp.data.remote.interceptor.OpenAIRetryInterceptor
-import com.example.exchangeapp.data.repository.AIRepository
-import com.example.exchangeapp.data.repository.AIRepositoryImpl
-import com.example.exchangeapp.data.repository.ChatRepositoryImpl
-import com.example.exchangeapp.data.repository.ItemRepositoryImpl
-import com.example.exchangeapp.data.repository.OrderRepositoryImpl
-import com.example.exchangeapp.data.repository.UserInteractionRepositoryImpl
-import com.example.exchangeapp.data.repository.UserRepositoryImpl
-import com.example.exchangeapp.domain.repository.ChatRepository
-import com.example.exchangeapp.domain.repository.ItemRepository
-import com.example.exchangeapp.domain.repository.OrderRepository
-import com.example.exchangeapp.domain.repository.UserInteractionRepository
-import com.example.exchangeapp.domain.repository.UserRepository
-import com.example.exchangeapp.domain.service.CurrentUserProvider
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Retrofit
-import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 /**
@@ -55,6 +27,7 @@ object AppModule {
      */
     @Provides
     @Singleton
+    @ApiKey
     fun provideApiKey(): String {
         return BuildConfig.OPENAI_API_KEY
     }
@@ -68,6 +41,7 @@ object AppModule {
      */
     @Provides
     @Singleton
+    @ApiEndpoint
     fun provideApiEndpoint(): String {
         return BuildConfig.OPENAI_API_ENDPOINT
     }

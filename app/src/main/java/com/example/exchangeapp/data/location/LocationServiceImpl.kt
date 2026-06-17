@@ -8,6 +8,7 @@ import androidx.core.app.ActivityCompat
 import com.example.exchangeapp.domain.model.Location
 import com.example.exchangeapp.domain.service.LocationService
 import com.google.android.gms.location.LocationServices
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -25,7 +26,7 @@ import kotlin.coroutines.suspendCoroutine
  */
 @Singleton
 class LocationServiceImpl @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) : LocationService {
 
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
@@ -33,16 +34,21 @@ class LocationServiceImpl @Inject constructor(
     /**
      * 获取用户当前位置。
      *
-     * - 当 ACCESS_FINE_LOCATION 权限未授予时返回 null。
+     * - 当位置权限未授予时回退为默认校区位置 [Location.DEFAULT_CAMPUS] (Requirement 15.6)。
      * - 当定位成功但无可用位置（lastLocation 为 null）或定位失败时返回 null。
      */
     override suspend fun getCurrentLocation(): Location? = suspendCoroutine { continuation ->
         if (ActivityCompat.checkSelfPermission(
                 context,
                 Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            continuation.resume(null)
+            // 未授权位置权限，使用默认校区位置 (Requirement 15.6)
+            continuation.resume(Location.DEFAULT_CAMPUS)
             return@suspendCoroutine
         }
 

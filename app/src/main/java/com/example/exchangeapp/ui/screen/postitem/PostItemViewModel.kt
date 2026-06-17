@@ -14,6 +14,7 @@ import com.example.exchangeapp.domain.service.LocationService
 import com.example.exchangeapp.domain.usecase.RecognizeItemImageUseCase
 import com.example.exchangeapp.domain.usecase.SaveItemUseCase
 import com.example.exchangeapp.domain.validation.ItemFormValidator
+import com.example.exchangeapp.util.ImageCompressor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -170,9 +171,12 @@ class PostItemViewModel @Inject constructor(
      */
     fun addImageFromBytes(imageBytes: ByteArray) {
         if (imageBytes.isEmpty()) return
-        
-        // 将图片字节进行Base64编码（NO_WRAP避免插入换行符）
-        val imageBase64 = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
+
+        // 上传前压缩图片（降采样 + JPEG质量压缩），减小存储与传输体积 (Requirements 6.2, 6.3)
+        val compressedBytes = ImageCompressor.compress(imageBytes)
+
+        // 将压缩后的图片字节进行Base64编码（NO_WRAP避免插入换行符）
+        val imageBase64 = Base64.encodeToString(compressedBytes, Base64.NO_WRAP)
         addImage(imageBase64)
     }
 

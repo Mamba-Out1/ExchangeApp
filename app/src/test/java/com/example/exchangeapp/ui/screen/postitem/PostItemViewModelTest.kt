@@ -10,21 +10,27 @@ import com.example.exchangeapp.domain.service.LocationService
 import com.example.exchangeapp.domain.usecase.RecognizeItemImageUseCase
 import com.example.exchangeapp.domain.usecase.SaveItemUseCase
 import com.example.exchangeapp.domain.validation.ItemFormValidator
+import app.cash.turbine.test
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PostItemViewModelTest {
@@ -40,6 +46,7 @@ class PostItemViewModelTest {
 
     @BeforeEach
     fun setup() {
+        Dispatchers.setMain(testDispatcher)
         mockRecognizeItemImageUseCase = mockk()
         mockSaveItemUseCase = mockk()
         mockItemFormValidator = mockk()
@@ -53,6 +60,11 @@ class PostItemViewModelTest {
             currentUserProvider = mockCurrentUserProvider,
             locationService = mockLocationService
         )
+    }
+
+    @AfterEach
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
@@ -139,10 +151,10 @@ class PostItemViewModelTest {
         // 添加图片
         viewModel.addImage("base64image")
         
-        viewModel.recognizeItemImage()
-        
-        // 验证识别状态变化
+        // 验证识别状态变化（在触发前开始收集，以观察Loading中间态）
         viewModel.recognitionState.test {
+            assertEquals(RecognitionState.Idle, awaitItem())
+            viewModel.recognizeItemImage()
             assertEquals(RecognitionState.Loading, awaitItem())
             assertEquals(RecognitionState.Success, awaitItem())
         }
@@ -174,9 +186,9 @@ class PostItemViewModelTest {
         coEvery { mockRecognizeItemImageUseCase(any()) } returns Result.failure(Exception("网络错误"))
         
         viewModel.addImage("base64image")
-        viewModel.recognizeItemImage()
-        
         viewModel.recognitionState.test {
+            assertEquals(RecognitionState.Idle, awaitItem())
+            viewModel.recognizeItemImage()
             assertEquals(RecognitionState.Loading, awaitItem())
             val errorState = awaitItem() as RecognitionState.Error
             assertTrue(errorState.message.contains("网络错误"))
@@ -224,7 +236,7 @@ class PostItemViewModelTest {
         
         every { mockCurrentUserProvider.getCurrentUserId() } returns userId
         every { mockItemFormValidator.validate(any()) } returns Result.success(Unit)
-        every { mockLocationService.getCurrentLocation() } returns Location(39.9042, 116.4074, "北京")
+        coEvery { mockLocationService.getCurrentLocation() } returns Location(39.9042, 116.4074, "北京")
         coEvery { mockSaveItemUseCase(any()) } returns Result.success(
             Item(
                 id = itemId,
@@ -248,9 +260,9 @@ class PostItemViewModelTest {
         viewModel.addImage("base64image")
         viewModel.updateTags(listOf("电子产品"))
         
-        viewModel.postItem()
-        
         viewModel.saveState.test {
+            assertEquals(SaveState.Idle, awaitItem())
+            viewModel.postItem()
             assertEquals(SaveState.Loading, awaitItem())
             val successState = awaitItem() as SaveState.Success
             assertEquals(itemId, successState.itemId)
@@ -348,13 +360,13 @@ class PostItemViewModelTest {
         }
         
         viewModel.addImage("base64image")
-        viewModel.recognizeItemImage()
-        
-        // 立即取消
-        viewModel.cancelRecognition()
         
         viewModel.recognitionState.test {
+            assertEquals(RecognitionState.Idle, awaitItem())
+            viewModel.recognizeItemImage()
             assertEquals(RecognitionState.Loading, awaitItem())
+            // 立即取消
+            viewModel.cancelRecognition()
             assertEquals(RecognitionState.Idle, awaitItem())
         }
     }

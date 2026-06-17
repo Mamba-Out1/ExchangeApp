@@ -15,9 +15,10 @@ interface LocationService {
     /**
      * 获取用户当前位置。
      *
-     * 需要 ACCESS_FINE_LOCATION 权限。
+     * 需要 ACCESS_FINE_LOCATION 或 ACCESS_COARSE_LOCATION 权限。
      *
-     * @return 当前位置的领域模型 [Location]；当权限未授予或定位失败时返回 null。
+     * @return 当前位置的领域模型 [Location]；当权限未授予时回退为默认校区位置
+     *   ([Location.DEFAULT_CAMPUS]，Requirement 15.6)；当定位失败或无可用位置时返回 null。
      */
     suspend fun getCurrentLocation(): Location?
 

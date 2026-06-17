@@ -44,7 +44,10 @@ interface RecommendationEngine {
     /**
      * 重新计算推荐分数。
      *
-     * 当前实现按需在 [getRecommendedItems] 中即时计算分数，因此无需缓存的重算逻辑。
+     * 清空推荐结果缓存，使下一次 [getRecommendedItems] 重新计算所有物品的推荐分数。
+     * 配合每隔 24 小时定时调用即可满足"每隔 24 小时重新计算所有物品分数"的需求。
+     *
+     * **验证需求: Requirements 3.7**
      */
     suspend fun recalculateScores()
 }

@@ -211,7 +211,7 @@ fun PermissionErrorView(
     ErrorView(
         iconResId = android.R.drawable.ic_lock_lock,
         title = "权限被拒绝",
-        message = "需要$permissionName权限才能继续使用该功能，请在设置中授予权限。",
+        message = "需要${permissionName}权限才能继续使用该功能，请在设置中授予权限。",
         retryText = "前往设置",
         onRetryClick = onGoToSettings
     )
@@ -312,7 +312,7 @@ fun OperationErrorView(
 ) {
     ErrorView(
         iconResId = android.R.drawable.ic_dialog_info,
-        title = "$operationName失败",
+        title = "${operationName}失败",
         message = errorMessage,
         retryText = "重试",
         secondaryText = if (onCancelClick != null) "取消" else null,

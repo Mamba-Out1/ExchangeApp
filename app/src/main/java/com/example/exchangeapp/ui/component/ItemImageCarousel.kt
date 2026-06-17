@@ -101,7 +101,7 @@ fun ItemImageCarousel(
             )
 
             // 底部圆点指示器
-            androidx.compose.material3.Row(
+            androidx.compose.foundation.layout.Row(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 16.dp),
@@ -198,7 +198,7 @@ private fun ImageNavigationControls(
     onNext: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    androidx.compose.material3.Row(
+    androidx.compose.foundation.layout.Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
     ) {

@@ -30,7 +30,7 @@ object DatabaseModule {
      * 
      * 配置:
      * - 数据库名称: exchange_app.db
-     * - 版本: 1
+     * - 版本: 2
      * - 不导出Schema以提高性能
      * 
      * @param context 应用上下文

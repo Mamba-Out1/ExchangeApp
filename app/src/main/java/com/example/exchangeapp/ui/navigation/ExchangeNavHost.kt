@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -22,9 +23,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
 import com.example.exchangeapp.ui.screen.chat.ChatScreen
-import com.example.exchangeapp.ui.screen.chat.ChatViewModel
+import com.example.exchangeapp.ui.screen.favorites.FavoritesScreen
 import com.example.exchangeapp.ui.screen.home.HomeScreen
 import com.example.exchangeapp.ui.screen.home.HomeViewModel
+import com.example.exchangeapp.ui.screen.itemdetail.ItemDetailScreen
+import com.example.exchangeapp.ui.screen.itemdetail.ItemDetailViewModel
 import com.example.exchangeapp.ui.screen.home.ItemsState
 import com.example.exchangeapp.ui.screen.home.LoadMoreState
 import com.example.exchangeapp.ui.screen.home.RefreshState
@@ -32,10 +35,17 @@ import com.example.exchangeapp.ui.screen.login.LoginScreen
 import com.example.exchangeapp.ui.screen.login.LoginViewModel
 import com.example.exchangeapp.ui.screen.order.OrderListScreen
 import com.example.exchangeapp.ui.screen.order.OrderListViewModel
+import com.example.exchangeapp.ui.screen.order.OrdersState
+import com.example.exchangeapp.ui.screen.order.OperationState
+import com.example.exchangeapp.ui.screen.order.RefreshState as OrderRefreshState
 import com.example.exchangeapp.ui.screen.postitem.PostItemScreen
-import com.example.exchangeapp.ui.screen.postitem.PostItemViewModel
+import com.example.exchangeapp.ui.screen.profile.ActionState
+import com.example.exchangeapp.ui.screen.profile.FavoriteItemsState
+import com.example.exchangeapp.ui.screen.profile.OrderCountState
 import com.example.exchangeapp.ui.screen.profile.ProfileScreen
 import com.example.exchangeapp.ui.screen.profile.ProfileViewModel
+import com.example.exchangeapp.ui.screen.profile.PublishedItemsState
+import com.example.exchangeapp.ui.screen.profile.UserState
 
 /**
  * 应用的主导航图
@@ -93,25 +103,22 @@ fun ExchangeNavHost(
                 val refreshState by viewModel.refreshState.collectAsStateWithLifecycle()
                 
                 // 将ViewModel的状态转换为UI状态
-                val uiState = when (itemsState) {
+                val currentItemsState = itemsState
+                val uiState = when (currentItemsState) {
                     is ItemsState.Empty -> com.example.exchangeapp.ui.screen.home.HomeUiState()
                     is ItemsState.Loading -> com.example.exchangeapp.ui.screen.home.HomeUiState(isLoading = true)
-                    else -> {
-                        if (itemsState is ItemsState.Success) {
-                            com.example.exchangeapp.ui.screen.home.HomeUiState(
-                                items = itemsState.items,
-                                isLoading = false,
-                                isRefreshing = refreshState is RefreshState.Loading,
-                                isLoadingMore = loadMoreState is LoadMoreState.Loading,
-                                hasMoreItems = loadMoreState !is LoadMoreState.NoMoreItems,
-                                error = null
-                            )
-                        } else if (itemsState is ItemsState.Error) {
-                            com.example.exchangeapp.ui.screen.home.HomeUiState(error = itemsState.message)
-                        } else {
-                            com.example.exchangeapp.ui.screen.home.HomeUiState()
-                        }
-                    }
+                    is ItemsState.Success -> com.example.exchangeapp.ui.screen.home.HomeUiState(
+                        items = currentItemsState.items,
+                        isLoading = false,
+                        isRefreshing = refreshState is RefreshState.Loading,
+                        isLoadingMore = loadMoreState is LoadMoreState.Loading,
+                        hasMoreItems = loadMoreState !is LoadMoreState.NoMoreItems,
+                        error = null
+                    )
+                    is ItemsState.Error -> com.example.exchangeapp.ui.screen.home.HomeUiState(
+                        error = currentItemsState.message
+                    )
+                    else -> com.example.exchangeapp.ui.screen.home.HomeUiState()
                 }
                 
                 HomeScreen(
@@ -133,27 +140,22 @@ fun ExchangeNavHost(
             
             // 发布物品
             composable(Routes.POST_ITEM) {
-                val viewModel: PostItemViewModel = hiltViewModel()
-                // 简化：直接显示屏幕，不连接ViewModel方法
+                // PostItemScreen通过hiltViewModel()连接PostItemViewModel，
+                // 此处仅提供导航回调。图片选择(系统相册/权限)由独立任务实现。
                 PostItemScreen(
-                    uiState = com.example.exchangeapp.ui.screen.postitem.PostItemUiState(),
-                    onImageSelected = { uri ->
-                        // 占位符实现
-                    },
-                    onImageRemoved = { index ->
-                        // 占位符实现
-                    },
-                    onFieldChanged = { field, value ->
-                        // 占位符实现
-                    },
-                    onAnalyzeImage = { imageUri ->
-                        // 占位符实现
-                    },
-                    onSubmit = {
-                        // 占位符实现
-                    },
                     onBack = {
                         navController.popBackStack()
+                    },
+                    onPostSuccess = { itemId ->
+                        // 发布成功后跳转到物品详情页 (Requirement 6.7)
+                        navController.navigate(Routes.itemDetail(itemId)) {
+                            popUpTo(Routes.POST_ITEM) {
+                                inclusive = true
+                            }
+                        }
+                    },
+                    onAddImageClick = {
+                        // 占位符：图片选择由权限/相册任务(17.x)实现
                     }
                 )
             }
@@ -161,20 +163,54 @@ fun ExchangeNavHost(
             // 个人中心
             composable(Routes.PROFILE) {
                 val viewModel: ProfileViewModel = hiltViewModel()
-                // 简化：直接显示屏幕，不连接ViewModel方法
+                val userState by viewModel.userState.collectAsStateWithLifecycle()
+                val publishedItemsState by viewModel.publishedItemsState.collectAsStateWithLifecycle()
+                val favoriteItemsState by viewModel.favoriteItemsState.collectAsStateWithLifecycle()
+                val orderCountState by viewModel.orderCountState.collectAsStateWithLifecycle()
+                val actionState by viewModel.actionState.collectAsStateWithLifecycle()
+
+                // 将ViewModel的多个状态聚合为ProfileUiState
+                val uiState = com.example.exchangeapp.ui.screen.profile.ProfileUiState(
+                    user = (userState as? UserState.Success)?.user,
+                    postedItems = (publishedItemsState as? PublishedItemsState.Success)?.items
+                        ?: emptyList(),
+                    favoriteItems = (favoriteItemsState as? FavoriteItemsState.Success)?.items
+                        ?: emptyList(),
+                    isLoading = userState is UserState.Loading,
+                    error = (userState as? UserState.Error)?.message,
+                    exchangeCount = (orderCountState as? OrderCountState.Success)?.count ?: 0
+                )
+
+                // 处理操作状态产生的导航副作用 (Requirement 7.5, 7.6)
+                LaunchedEffect(actionState) {
+                    when (val state = actionState) {
+                        is ActionState.NavigateToItemDetail -> {
+                            navController.navigate(Routes.itemDetail(state.itemId))
+                            viewModel.resetActionState()
+                        }
+                        is ActionState.NavigateToEdit -> {
+                            // 编辑通过物品详情页处理
+                            navController.navigate(Routes.itemDetail(state.itemId))
+                            viewModel.resetActionState()
+                        }
+                        else -> Unit
+                    }
+                }
+
                 ProfileScreen(
-                    uiState = com.example.exchangeapp.ui.screen.profile.ProfileUiState(),
+                    uiState = uiState,
                     onItemClick = { itemId ->
                         navController.navigate(Routes.itemDetail(itemId))
                     },
                     onFavoriteClick = { itemId ->
-                        navController.navigate(Routes.itemDetail(itemId))
+                        // 通过ViewModel记录并跳转到收藏物品详情 (Requirement 7.6)
+                        viewModel.viewFavoriteItem(itemId)
                     },
                     onEditItem = { itemId ->
-                        // TODO: 导航到编辑页面
+                        viewModel.editItem(itemId)
                     },
                     onDeleteItem = { itemId ->
-                        // 占位符实现
+                        viewModel.deleteItem(itemId)
                     },
                     onLogout = {
                         // 登出逻辑，导航回登录页
@@ -183,27 +219,66 @@ fun ExchangeNavHost(
                                 inclusive = true
                             }
                         }
-                    }
+                    },
+                    onRetry = { viewModel.refresh() }
                 )
             }
             
             // 订单管理
             composable(Routes.ORDERS) {
                 val viewModel: OrderListViewModel = hiltViewModel()
-                // 简化：直接显示屏幕，不连接ViewModel方法
+                val ordersState by viewModel.ordersState.collectAsStateWithLifecycle()
+                val refreshState by viewModel.refreshState.collectAsStateWithLifecycle()
+                val operationState by viewModel.operationState.collectAsStateWithLifecycle()
+
+                // 将ViewModel的多个状态聚合为OrderListUiState
+                val currentOrdersState = ordersState
+                val operationMessage = when (val op = operationState) {
+                    is OperationState.Success -> op.message
+                    is OperationState.Error -> op.message
+                    else -> null
+                }
+                val uiState = when (currentOrdersState) {
+                    is OrdersState.Loading -> com.example.exchangeapp.ui.screen.order.OrderListUiState(
+                        isLoading = true
+                    )
+                    is OrdersState.Empty -> com.example.exchangeapp.ui.screen.order.OrderListUiState(
+                        isRefreshing = refreshState is OrderRefreshState.Loading,
+                        operationMessage = operationMessage
+                    )
+                    is OrdersState.Success -> com.example.exchangeapp.ui.screen.order.OrderListUiState(
+                        orders = currentOrdersState.orders,
+                        isRefreshing = refreshState is OrderRefreshState.Loading,
+                        operationMessage = operationMessage
+                    )
+                    is OrdersState.Error -> com.example.exchangeapp.ui.screen.order.OrderListUiState(
+                        error = currentOrdersState.message
+                    )
+                }
+
+                // 操作结果(确认/取消)反馈展示后重置，避免重复触发Snackbar
+                LaunchedEffect(operationState) {
+                    if (operationState is OperationState.Success || operationState is OperationState.Error) {
+                        viewModel.resetOperationState()
+                    }
+                }
+
                 OrderListScreen(
-                    uiState = com.example.exchangeapp.ui.screen.order.OrderListUiState(),
+                    uiState = uiState,
                     onOrderClick = { orderId ->
-                        // TODO: 导航到订单详情页
+                        // TODO: 导航到订单详情页(订单详情界面由后续任务实现)
                     },
                     onConfirmOrder = { orderId ->
-                        // 占位符实现
+                        viewModel.confirmOrder(orderId)
                     },
                     onCancelOrder = { orderId ->
-                        // 占位符实现
+                        viewModel.cancelOrder(orderId)
                     },
                     onRateOrder = { orderId, rating ->
-                        // 占位符实现
+                        // TODO: 订单评价由后续任务实现
+                    },
+                    onRefresh = {
+                        viewModel.refresh()
                     }
                 )
             }
@@ -216,44 +291,55 @@ fun ExchangeNavHost(
                 )
             ) { backStackEntry ->
                 val userId = backStackEntry.arguments?.getString("userId") ?: ""
-                val viewModel: ChatViewModel = hiltViewModel()
-                // 简化：直接显示屏幕，不连接ViewModel方法
-                
+
+                // ChatScreen通过hiltViewModel()连接ChatViewModel，
+                // 内部根据otherUserId初始化会话并观察消息流。
                 ChatScreen(
-                    uiState = com.example.exchangeapp.ui.screen.chat.ChatUiState(otherUserId = userId),
-                    onMessageSent = { message ->
-                        // 占位符实现
-                    },
-                    onImageSent = { imageUri ->
-                        // 占位符实现
-                    },
+                    otherUserId = userId,
                     onBack = {
                         navController.popBackStack()
                     }
                 )
             }
             
-            // 收藏列表（TODO: 待实现）
+            // 收藏列表 (Requirement 7.4, 7.6, 10.5)
             composable(Routes.FAVORITES) {
-                // TODO: 实现收藏列表屏幕
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "收藏列表",
-                            style = MaterialTheme.typography.headlineSmall
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = "收藏列表功能开发中")
+                // 复用ProfileViewModel加载收藏数据
+                val viewModel: ProfileViewModel = hiltViewModel()
+                val favoriteItemsState by viewModel.favoriteItemsState.collectAsStateWithLifecycle()
+                val actionState by viewModel.actionState.collectAsStateWithLifecycle()
+
+                // 将FavoriteItemsState映射为FavoritesScreen所需的参数
+                val currentFavoriteItemsState = favoriteItemsState
+                val favoriteItems = (currentFavoriteItemsState as? FavoriteItemsState.Success)?.items
+                    ?: emptyList()
+                val isLoading = currentFavoriteItemsState is FavoriteItemsState.Loading
+                val error = (currentFavoriteItemsState as? FavoriteItemsState.Error)?.message
+
+                // 处理操作状态产生的导航副作用 (Requirement 7.6)
+                LaunchedEffect(actionState) {
+                    when (val state = actionState) {
+                        is ActionState.NavigateToItemDetail -> {
+                            navController.navigate(Routes.itemDetail(state.itemId))
+                            viewModel.resetActionState()
+                        }
+                        else -> Unit
                     }
                 }
+
+                FavoritesScreen(
+                    favoriteItems = favoriteItems,
+                    isLoading = isLoading,
+                    error = error,
+                    onItemClick = { itemId ->
+                        // 通过ViewModel记录并跳转到收藏物品详情 (Requirement 7.6)
+                        viewModel.viewFavoriteItem(itemId)
+                    },
+                    onRetry = { viewModel.refresh() }
+                )
             }
             
-            // 物品详情（TODO: 待实现）
+            // 物品详情
             composable(
                 route = Routes.ITEM_DETAIL_WITH_ID,
                 arguments = listOf(
@@ -261,22 +347,35 @@ fun ExchangeNavHost(
                 )
             ) { backStackEntry ->
                 val itemId = backStackEntry.arguments?.getString("itemId") ?: ""
-                // TODO: 实现物品详情屏幕
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "物品详情",
-                            style = MaterialTheme.typography.headlineSmall
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = "物品详情($itemId)功能开发中")
+                val viewModel: ItemDetailViewModel = hiltViewModel()
+                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+                // 进入屏幕时加载物品详情
+                LaunchedEffect(itemId) {
+                    if (itemId.isNotEmpty()) {
+                        viewModel.loadItemDetails(itemId)
                     }
                 }
+
+                ItemDetailScreen(
+                    uiState = uiState,
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+                    onToggleFavorite = {
+                        viewModel.toggleFavorite()
+                    },
+                    onContactSeller = {
+                        // 导航到与卖家的聊天界面
+                        uiState.item?.userId?.let { sellerId ->
+                            navController.navigate(Routes.chatWithUser(sellerId))
+                        }
+                    },
+                    onMatchedItemClick = { matchedItemId ->
+                        // 导航到匹配物品的详情页
+                        navController.navigate(Routes.itemDetail(matchedItemId))
+                    }
+                )
             }
         }
     }
