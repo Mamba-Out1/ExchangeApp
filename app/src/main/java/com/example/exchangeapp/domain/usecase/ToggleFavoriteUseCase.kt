@@ -1,5 +1,6 @@
 package com.example.exchangeapp.domain.usecase
 
+import com.example.exchangeapp.domain.recommendation.RecommendationEngine
 import com.example.exchangeapp.domain.repository.UserInteractionRepository
 import com.example.exchangeapp.domain.service.CurrentUserProvider
 import javax.inject.Inject
@@ -29,7 +30,8 @@ import javax.inject.Inject
  */
 class ToggleFavoriteUseCase @Inject constructor(
     private val userInteractionRepository: UserInteractionRepository,
-    private val currentUserProvider: CurrentUserProvider
+    private val currentUserProvider: CurrentUserProvider,
+    private val recommendationEngine: RecommendationEngine
 ) {
 
     /**
@@ -50,6 +52,10 @@ class ToggleFavoriteUseCase @Inject constructor(
         // 切换收藏状态
         val newIsFavorite = !currentIsFavorite
         userInteractionRepository.setFavorite(itemId, newIsFavorite)
+
+        // 收藏权重变化后清除推荐缓存，使"猜你喜欢"下次重新计算并反映收藏行为
+        // (Requirement 3.6)。
+        recommendationEngine.recalculateScores()
 
         // 返回切换结果
         ToggleFavoriteResult(

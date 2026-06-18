@@ -139,6 +139,11 @@ fun ExchangeNavHost(
                 val itemsState by viewModel.itemsState.collectAsStateWithLifecycle()
                 val loadMoreState by viewModel.loadMoreState.collectAsStateWithLifecycle()
                 val refreshState by viewModel.refreshState.collectAsStateWithLifecycle()
+
+                // 首页可见时启动每10秒的推荐定时重算 (Requirement 3.7，按需求改为10秒)
+                LaunchedEffect(Unit) {
+                    viewModel.startPeriodicRecalculation()
+                }
                 
                 // 将ViewModel的状态转换为UI状态
                 val currentItemsState = itemsState
@@ -316,6 +321,9 @@ fun ExchangeNavHost(
                     onRateOrder = { orderId, rating ->
                         // TODO: 订单评价由后续任务实现
                     },
+                    onCompleteOrder = { orderId ->
+                        viewModel.completeOrder(orderId)
+                    },
                     onRefresh = {
                         viewModel.refresh()
                     }
@@ -422,6 +430,12 @@ fun ExchangeNavHost(
                     onMatchedItemClick = { matchedItemId ->
                         // 导航到匹配物品的详情页
                         navController.navigate(Routes.itemDetail(matchedItemId))
+                    },
+                    onInitiateExchange = { myItemId ->
+                        viewModel.initiateExchange(myItemId)
+                    },
+                    onExchangeMessageShown = {
+                        viewModel.clearExchangeMessage()
                     }
                 )
             }

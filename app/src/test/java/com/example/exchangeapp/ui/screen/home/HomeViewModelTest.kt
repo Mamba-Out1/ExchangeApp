@@ -5,6 +5,7 @@ import com.example.exchangeapp.domain.model.ItemStatus
 import com.example.exchangeapp.domain.model.Location
 import com.example.exchangeapp.domain.service.CurrentUserProvider
 import com.example.exchangeapp.domain.service.LocationService
+import com.example.exchangeapp.domain.recommendation.RecommendationEngine
 import com.example.exchangeapp.domain.usecase.GetRecommendedItemsUseCase
 import com.example.exchangeapp.domain.usecase.ToggleFavoriteUseCase
 import io.mockk.coEvery
@@ -34,6 +35,7 @@ class HomeViewModelTest {
     private lateinit var viewModel: HomeViewModel
     private lateinit var mockGetRecommendedItemsUseCase: GetRecommendedItemsUseCase
     private lateinit var mockToggleFavoriteUseCase: ToggleFavoriteUseCase
+    private lateinit var mockRecommendationEngine: RecommendationEngine
     private lateinit var mockCurrentUserProvider: CurrentUserProvider
     private lateinit var mockLocationService: LocationService
 
@@ -88,6 +90,7 @@ class HomeViewModelTest {
         
         mockGetRecommendedItemsUseCase = mockk()
         mockToggleFavoriteUseCase = mockk()
+        mockRecommendationEngine = mockk(relaxed = true)
         mockCurrentUserProvider = mockk()
         mockLocationService = mockk()
         
@@ -112,6 +115,7 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(
             mockGetRecommendedItemsUseCase,
             mockToggleFavoriteUseCase,
+            mockRecommendationEngine,
             mockCurrentUserProvider,
             mockLocationService
         )
@@ -142,6 +146,7 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(
             mockGetRecommendedItemsUseCase,
             mockToggleFavoriteUseCase,
+            mockRecommendationEngine,
             mockCurrentUserProvider,
             mockLocationService
         )
@@ -166,6 +171,7 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(
             mockGetRecommendedItemsUseCase,
             mockToggleFavoriteUseCase,
+            mockRecommendationEngine,
             mockCurrentUserProvider,
             mockLocationService
         )
@@ -200,6 +206,7 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(
             mockGetRecommendedItemsUseCase,
             mockToggleFavoriteUseCase,
+            mockRecommendationEngine,
             mockCurrentUserProvider,
             mockLocationService
         )
@@ -232,6 +239,7 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(
             mockGetRecommendedItemsUseCase,
             mockToggleFavoriteUseCase,
+            mockRecommendationEngine,
             mockCurrentUserProvider,
             mockLocationService
         )
@@ -278,6 +286,7 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(
             mockGetRecommendedItemsUseCase,
             mockToggleFavoriteUseCase,
+            mockRecommendationEngine,
             mockCurrentUserProvider,
             mockLocationService
         )
@@ -307,6 +316,7 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(
             mockGetRecommendedItemsUseCase,
             mockToggleFavoriteUseCase,
+            mockRecommendationEngine,
             mockCurrentUserProvider,
             mockLocationService
         )
@@ -324,6 +334,7 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(
             mockGetRecommendedItemsUseCase,
             mockToggleFavoriteUseCase,
+            mockRecommendationEngine,
             mockCurrentUserProvider,
             mockLocationService
         )
@@ -354,6 +365,7 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(
             mockGetRecommendedItemsUseCase,
             mockToggleFavoriteUseCase,
+            mockRecommendationEngine,
             mockCurrentUserProvider,
             mockLocationService
         )
@@ -378,6 +390,7 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(
             mockGetRecommendedItemsUseCase,
             mockToggleFavoriteUseCase,
+            mockRecommendationEngine,
             mockCurrentUserProvider,
             mockLocationService
         )

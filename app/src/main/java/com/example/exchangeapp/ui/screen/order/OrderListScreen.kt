@@ -75,6 +75,7 @@ fun OrderListScreen(
     onConfirmOrder: (String) -> Unit,
     onCancelOrder: (String) -> Unit,
     onRateOrder: (String, Int) -> Unit,
+    onCompleteOrder: (String) -> Unit,
     onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -145,6 +146,7 @@ fun OrderListScreen(
                                 onConfirmOrder = { onConfirmOrder(order.id) },
                                 onCancelOrder = { onCancelOrder(order.id) },
                                 onRateOrder = { rating -> onRateOrder(order.id, rating) },
+                                onCompleteOrder = { onCompleteOrder(order.id) },
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
@@ -171,6 +173,7 @@ private fun OrderCard(
     onConfirmOrder: () -> Unit,
     onCancelOrder: () -> Unit,
     onRateOrder: (Int) -> Unit,
+    onCompleteOrder: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -253,7 +256,17 @@ private fun OrderCard(
                         Text(text = "评价")
                     }
                 }
-                // 进行中 / 已取消：无内联操作按钮
+                // 进行中：完成交换 (Requirement 8.7)
+                OrderStatus.IN_PROGRESS -> {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = onCompleteOrder,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "完成交换")
+                    }
+                }
+                // 已取消：无内联操作按钮
                 else -> Unit
             }
         }

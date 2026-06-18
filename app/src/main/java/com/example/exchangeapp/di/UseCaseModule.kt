@@ -7,6 +7,7 @@ import com.example.exchangeapp.domain.recommendation.RecommendationEngine
 import com.example.exchangeapp.domain.recommendation.RecommendationEngineImpl
 import com.example.exchangeapp.domain.service.LocationService
 import com.example.exchangeapp.domain.usecase.CalculateDistanceUseCase
+import com.example.exchangeapp.domain.usecase.CreateExchangeOrderUseCase
 import com.example.exchangeapp.domain.usecase.DeleteItemUseCase
 import com.example.exchangeapp.domain.usecase.GetItemDetailsUseCase
 import com.example.exchangeapp.domain.usecase.GetMatchedItemsUseCase
@@ -190,6 +191,22 @@ object UseCaseModule {
     }
     
     /**
+     * 提供CreateExchangeOrderUseCase实例
+     *
+     * 发起交换（创建交换订单）Use Case
+     *
+     * @param orderRepository 订单仓库
+     * @return CreateExchangeOrderUseCase实例
+     */
+    @Provides
+    @Singleton
+    fun provideCreateExchangeOrderUseCase(
+        orderRepository: com.example.exchangeapp.domain.repository.OrderRepository
+    ): CreateExchangeOrderUseCase {
+        return CreateExchangeOrderUseCase(orderRepository)
+    }
+
+    /**
      * 提供DeleteItemUseCase实例
      * 
      * 删除物品Use Case
@@ -266,9 +283,10 @@ object UseCaseModule {
     @Singleton
     fun provideToggleFavoriteUseCase(
         userInteractionRepository: com.example.exchangeapp.domain.repository.UserInteractionRepository,
-        currentUserProvider: com.example.exchangeapp.domain.service.CurrentUserProvider
+        currentUserProvider: com.example.exchangeapp.domain.service.CurrentUserProvider,
+        recommendationEngine: RecommendationEngine
     ): ToggleFavoriteUseCase {
-        return ToggleFavoriteUseCase(userInteractionRepository, currentUserProvider)
+        return ToggleFavoriteUseCase(userInteractionRepository, currentUserProvider, recommendationEngine)
     }
 
     /**

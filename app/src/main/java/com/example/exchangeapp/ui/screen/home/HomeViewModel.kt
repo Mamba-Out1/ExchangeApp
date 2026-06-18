@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.exchangeapp.domain.model.Item
 import com.example.exchangeapp.domain.model.Location
+import com.example.exchangeapp.domain.recommendation.RecommendationEngine
 import com.example.exchangeapp.domain.service.CurrentUserProvider
 import com.example.exchangeapp.domain.service.LocationService
 import com.example.exchangeapp.domain.usecase.GetRecommendedItemsUseCase
@@ -11,6 +12,7 @@ import com.example.exchangeapp.domain.usecase.ToggleFavoriteUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +40,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val getRecommendedItemsUseCase: GetRecommendedItemsUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
+    private val recommendationEngine: RecommendationEngine,
     private val currentUserProvider: CurrentUserProvider,
     private val locationService: LocationService
 ) : ViewModel() {
@@ -45,6 +48,7 @@ class HomeViewModel @Inject constructor(
     companion object {
         private const val ITEMS_PER_PAGE = 20 // 每页加载20个Item (Requirement 5.6)
         private const val REFRESH_DELAY_MS = 500L // 下拉刷新延迟，为了显示动画效果
+        private const val RECALC_INTERVAL_MS = 10_000L // 定时重算推荐的间隔：10秒
     }
 
     // 物品列表状态
@@ -66,12 +70,72 @@ class HomeViewModel @Inject constructor(
 
     private var loadMoreJob: Job? = null
     private var refreshJob: Job? = null
+    private var periodicRecalcJob: Job? = null
 
     /**
      * 初始化ViewModel，加载第一页数据
      */
     init {
         loadInitialData()
+    }
+
+    /**
+     * 启动定时重算任务：每隔 [RECALC_INTERVAL_MS]（10秒）清空推荐缓存并重新计算推荐，
+     * 静默刷新首页列表以反映最新的点击/收藏权重 (Requirement 3.7 的定时重算，按需求改为10秒)。
+     *
+     * 由界面在首页可见时调用（如 LaunchedEffect），离开 ViewModel 生命周期时随作用域取消。
+     * 重复调用是安全的：会先取消已有任务，确保同一时间只有一个定时循环。
+     *
+     * 仅在已成功展示列表时进行，避免覆盖加载中/错误/空状态；不显示刷新动画，避免打断浏览。
+     */
+    fun startPeriodicRecalculation() {
+        periodicRecalcJob?.cancel()
+        periodicRecalcJob = viewModelScope.launch {
+            while (isActive) {
+                delay(RECALC_INTERVAL_MS)
+                recalculateRecommendations()
+            }
+        }
+    }
+
+    /**
+     * 清空推荐缓存并按最新权重重新计算推荐，静默更新列表。
+     * 保持当前已展示的物品数量，尽量减少对浏览位置的影响。
+     */
+    private suspend fun recalculateRecommendations() {
+        val userId = currentUserProvider.getCurrentUserId() ?: return
+
+        // 仅在已成功展示列表时静默重算
+        val current = _itemsState.value as? ItemsState.Success ?: return
+
+        try {
+            // 清空推荐缓存，强制重新计算所有物品的推荐分数
+            recommendationEngine.recalculateScores()
+
+            val result = getRecommendedItemsUseCase(
+                userId = userId,
+                userLocation = userLocation,
+                limit = ITEMS_PER_PAGE
+            )
+
+            if (result.isSuccess) {
+                val items = result.getOrThrow()
+                allItems = items
+                if (items.isEmpty()) {
+                    _itemsState.value = ItemsState.Empty
+                    currentPage = 0
+                } else {
+                    // 保持当前已展示数量（至少一页），按最新推荐顺序重新展示
+                    val shownCount = current.items.size
+                        .coerceIn(minOf(ITEMS_PER_PAGE, items.size), items.size)
+                    _itemsState.value = ItemsState.Success(items.take(shownCount))
+                    currentPage = ((shownCount + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE)
+                        .coerceAtLeast(1)
+                }
+            }
+        } catch (e: Exception) {
+            // 静默处理：定时重算失败不应影响当前已展示的内容
+        }
     }
 
     /**
@@ -292,6 +356,14 @@ class HomeViewModel @Inject constructor(
      */
     fun isUserLoggedIn(): Boolean {
         return currentUserProvider.getCurrentUserId() != null
+    }
+
+    /**
+     * ViewModel 销毁时取消定时重算任务，避免泄漏。
+     */
+    override fun onCleared() {
+        super.onCleared()
+        periodicRecalcJob?.cancel()
     }
 }
 

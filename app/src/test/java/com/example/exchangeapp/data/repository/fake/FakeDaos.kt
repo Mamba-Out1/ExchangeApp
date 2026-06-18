@@ -154,6 +154,22 @@ class FakeChatDao : ChatDao {
             store.values.count { it.receiverId == userId && !it.isRead }
         }
     }
+
+    override suspend fun getLatestMessagesForUser(userId: String): List<ChatMessageEntity> {
+        guardRead()
+        return store.values
+            .filter { it.senderId == userId || it.receiverId == userId }
+            .groupBy { it.conversationId }
+            .map { (_, msgs) -> msgs.maxByOrNull { it.timestamp }!! }
+            .sortedByDescending { it.timestamp }
+    }
+
+    override suspend fun getUnreadCountForConversation(conversationId: String, userId: String): Int {
+        guardRead()
+        return store.values.count {
+            it.conversationId == conversationId && it.receiverId == userId && !it.isRead
+        }
+    }
 }
 
 /** 内存版 [OrderDao] 假实现。 */

@@ -1,6 +1,7 @@
 package com.example.exchangeapp.ui.screen.itemdetail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,18 +25,24 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,6 +78,8 @@ fun ItemDetailScreen(
     onToggleFavorite: () -> Unit,
     onContactSeller: () -> Unit,
     onMatchedItemClick: (String) -> Unit,
+    onInitiateExchange: (String) -> Unit,
+    onExchangeMessageShown: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -79,6 +88,14 @@ fun ItemDetailScreen(
     LaunchedEffect(uiState.error) {
         if (uiState.error != null && uiState.item != null) {
             snackbarHostState.showSnackbar(uiState.error)
+        }
+    }
+
+    // 发起交换的一次性反馈消息，通过Snackbar展示后回调清除
+    LaunchedEffect(uiState.exchangeMessage) {
+        uiState.exchangeMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            onExchangeMessageShown()
         }
     }
 
@@ -148,6 +165,7 @@ fun ItemDetailScreen(
                     uiState = uiState,
                     onContactSeller = onContactSeller,
                     onMatchedItemClick = onMatchedItemClick,
+                    onInitiateExchange = onInitiateExchange,
                     modifier = contentModifier
                 )
             }
@@ -163,9 +181,13 @@ private fun ItemDetailContent(
     uiState: ItemDetailUiState,
     onContactSeller: () -> Unit,
     onMatchedItemClick: (String) -> Unit,
+    onInitiateExchange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val item = uiState.item ?: return
+
+    // 发起交换物品选择对话框的本地显示状态
+    var showExchangeDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier.verticalScroll(rememberScrollState())
@@ -290,6 +312,17 @@ private fun ItemDetailContent(
                 Text(text = "联系卖家")
             }
 
+            // 发起交换按钮（仅对非本人物品显示）
+            if (!uiState.isOwnItem) {
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = { showExchangeDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "发起交换")
+                }
+            }
+
             Spacer(modifier = Modifier.height(32.dp))
         }
 
@@ -327,6 +360,78 @@ private fun ItemDetailContent(
 
         Spacer(modifier = Modifier.height(32.dp))
     }
+
+    // 发起交换：选择用于交换的本人物品对话框
+    if (showExchangeDialog) {
+        ExchangeItemSelectionDialog(
+            myItems = uiState.myItems,
+            onItemSelected = { selectedItemId ->
+                showExchangeDialog = false
+                onInitiateExchange(selectedItemId)
+            },
+            onDismiss = { showExchangeDialog = false }
+        )
+    }
+}
+
+/**
+ * 发起交换物品选择对话框
+ *
+ * 列出当前用户可用于交换的物品，点击某项即选定并发起交换。
+ * 当没有可交换物品时，提示用户先发布物品。
+ */
+@Composable
+private fun ExchangeItemSelectionDialog(
+    myItems: List<Item>,
+    onItemSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "选择用于交换的物品") },
+        text = {
+            if (myItems.isEmpty()) {
+                Text(text = "你还没有可交换的物品，请先发布物品")
+            } else {
+                LazyColumn(
+                    modifier = Modifier.height(280.dp)
+                ) {
+                    items(
+                        items = myItems,
+                        key = { it.id }
+                    ) { myItem ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onItemSelected(myItem.id) }
+                                .padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = myItem.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = String.format("¥%.2f", myItem.estimatedPrice),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = "取消")
+            }
+        }
+    )
 }
 
 /**
@@ -338,5 +443,8 @@ data class ItemDetailUiState(
     val isFavorite: Boolean = false,
     val distance: String? = null,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val isOwnItem: Boolean = false,
+    val myItems: List<Item> = emptyList(),
+    val exchangeMessage: String? = null
 )

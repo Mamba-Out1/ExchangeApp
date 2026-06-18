@@ -2,6 +2,8 @@ package com.example.exchangeapp.ui.screen.order
 
 import com.example.exchangeapp.domain.model.Order
 import com.example.exchangeapp.domain.model.OrderStatus
+import com.example.exchangeapp.domain.recommendation.RecommendationEngine
+import com.example.exchangeapp.domain.repository.ItemRepository
 import com.example.exchangeapp.domain.repository.OrderRepository
 import com.example.exchangeapp.domain.service.CurrentUserProvider
 import io.mockk.coEvery
@@ -30,6 +32,8 @@ class OrderListViewModelTest {
 
     private lateinit var viewModel: OrderListViewModel
     private lateinit var mockOrderRepository: OrderRepository
+    private lateinit var mockItemRepository: ItemRepository
+    private lateinit var mockRecommendationEngine: RecommendationEngine
     private lateinit var mockCurrentUserProvider: CurrentUserProvider
 
     private val testUserId = "test-user-1"
@@ -77,6 +81,8 @@ class OrderListViewModelTest {
         Dispatchers.setMain(testDispatcher)
         
         mockOrderRepository = mockk()
+        mockItemRepository = mockk(relaxed = true)
+        mockRecommendationEngine = mockk(relaxed = true)
         mockCurrentUserProvider = mockk()
         
         // 配置默认的用户登录状态
@@ -96,6 +102,8 @@ class OrderListViewModelTest {
         // When: 创建ViewModel
         viewModel = OrderListViewModel(
             mockOrderRepository,
+            mockItemRepository,
+            mockRecommendationEngine,
             mockCurrentUserProvider
         )
         
@@ -130,6 +138,8 @@ class OrderListViewModelTest {
         // When: 创建ViewModel
         viewModel = OrderListViewModel(
             mockOrderRepository,
+            mockItemRepository,
+            mockRecommendationEngine,
             mockCurrentUserProvider
         )
         
@@ -152,6 +162,8 @@ class OrderListViewModelTest {
         // When: 创建ViewModel并调用refresh
         viewModel = OrderListViewModel(
             mockOrderRepository,
+            mockItemRepository,
+            mockRecommendationEngine,
             mockCurrentUserProvider
         )
         
@@ -182,6 +194,8 @@ class OrderListViewModelTest {
         // When: 创建ViewModel
         viewModel = OrderListViewModel(
             mockOrderRepository,
+            mockItemRepository,
+            mockRecommendationEngine,
             mockCurrentUserProvider
         )
         
@@ -213,6 +227,8 @@ class OrderListViewModelTest {
         // When: 创建ViewModel
         viewModel = OrderListViewModel(
             mockOrderRepository,
+            mockItemRepository,
+            mockRecommendationEngine,
             mockCurrentUserProvider
         )
         
@@ -241,6 +257,8 @@ class OrderListViewModelTest {
         // When: 创建ViewModel
         viewModel = OrderListViewModel(
             mockOrderRepository,
+            mockItemRepository,
+            mockRecommendationEngine,
             mockCurrentUserProvider
         )
         
@@ -264,6 +282,8 @@ class OrderListViewModelTest {
         // When: 创建ViewModel
         viewModel = OrderListViewModel(
             mockOrderRepository,
+            mockItemRepository,
+            mockRecommendationEngine,
             mockCurrentUserProvider
         )
         
@@ -286,6 +306,8 @@ class OrderListViewModelTest {
         // When: 创建ViewModel
         viewModel = OrderListViewModel(
             mockOrderRepository,
+            mockItemRepository,
+            mockRecommendationEngine,
             mockCurrentUserProvider
         )
         
@@ -323,6 +345,8 @@ class OrderListViewModelTest {
         // When: 创建ViewModel
         viewModel = OrderListViewModel(
             mockOrderRepository,
+            mockItemRepository,
+            mockRecommendationEngine,
             mockCurrentUserProvider
         )
         
@@ -354,6 +378,8 @@ class OrderListViewModelTest {
         // When: 创建ViewModel
         viewModel = OrderListViewModel(
             mockOrderRepository,
+            mockItemRepository,
+            mockRecommendationEngine,
             mockCurrentUserProvider
         )
         
@@ -382,6 +408,8 @@ class OrderListViewModelTest {
         // When: 创建ViewModel
         viewModel = OrderListViewModel(
             mockOrderRepository,
+            mockItemRepository,
+            mockRecommendationEngine,
             mockCurrentUserProvider
         )
         
@@ -401,6 +429,8 @@ class OrderListViewModelTest {
         // When: 创建ViewModel
         viewModel = OrderListViewModel(
             mockOrderRepository,
+            mockItemRepository,
+            mockRecommendationEngine,
             mockCurrentUserProvider
         )
         
@@ -426,6 +456,8 @@ class OrderListViewModelTest {
         // When: 创建ViewModel
         viewModel = OrderListViewModel(
             mockOrderRepository,
+            mockItemRepository,
+            mockRecommendationEngine,
             mockCurrentUserProvider
         )
         

@@ -3,10 +3,14 @@ package com.example.exchangeapp.ui.screen.itemdetail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.exchangeapp.domain.model.Item
+import com.example.exchangeapp.domain.model.ItemStatus
 import com.example.exchangeapp.domain.model.Location
+import com.example.exchangeapp.domain.recommendation.RecommendationEngine
+import com.example.exchangeapp.domain.repository.ItemRepository
 import com.example.exchangeapp.domain.service.CurrentUserProvider
 import com.example.exchangeapp.domain.service.LocationService
 import com.example.exchangeapp.domain.usecase.CalculateDistanceUseCase
+import com.example.exchangeapp.domain.usecase.CreateExchangeOrderUseCase
 import com.example.exchangeapp.domain.usecase.GetItemDetailsUseCase
 import com.example.exchangeapp.domain.usecase.GetMatchedItemsUseCase
 import com.example.exchangeapp.domain.usecase.ToggleFavoriteUseCase
@@ -39,6 +43,9 @@ class ItemDetailViewModel @Inject constructor(
     private val getMatchedItemsUseCase: GetMatchedItemsUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val calculateDistanceUseCase: CalculateDistanceUseCase,
+    private val createExchangeOrderUseCase: CreateExchangeOrderUseCase,
+    private val itemRepository: ItemRepository,
+    private val recommendationEngine: RecommendationEngine,
     private val currentUserProvider: CurrentUserProvider,
     private val locationService: LocationService
 ) : ViewModel() {
@@ -58,6 +65,10 @@ class ItemDetailViewModel @Inject constructor(
         currentItemId = itemId
         _uiState.update { it.copy(isLoading = true, error = null) }
 
+        // 记录一次"点击/浏览"行为，增加该物品的点击权重，使"猜你喜欢"推荐能反映用户兴趣
+        // (Requirement 3.5)。引擎在权重变化后会清除推荐缓存，下次推荐即时生效。
+        recommendationEngine.updateClickWeight(itemId)
+
         viewModelScope.launch {
             try {
                 // 获取用户当前位置
@@ -76,11 +87,23 @@ class ItemDetailViewModel @Inject constructor(
                     
                     // 获取匹配物品
                     loadMatchedItems(item)
-                    
-                    // 更新UI状态（包含距离）
+
+                    // 计算是否为当前用户自己的物品，并加载当前用户可交换的物品列表
+                    val currentUserId = currentUserProvider.getCurrentUserId()
+                    val isOwnItem = currentUserId != null && item.userId == currentUserId
+                    val myItems = if (currentUserId != null) {
+                        itemRepository.getItemsByUserId(currentUserId)
+                            .filter { it.status == ItemStatus.AVAILABLE && it.id != item.id }
+                    } else {
+                        emptyList()
+                    }
+
+                    // 更新UI状态（包含距离、归属判断与可交换物品列表）
                     _uiState.update { it.copy(
                         item = item,
                         distance = distance,
+                        isOwnItem = isOwnItem,
+                        myItems = myItems,
                         isLoading = false
                     ) }
                 } else {
@@ -137,6 +160,59 @@ class ItemDetailViewModel @Inject constructor(
                 // 静默处理
             }
         }
+    }
+
+    /**
+     * 发起交换
+     *
+     * 使用当前用户选择的物品（myItemId）向当前详情物品的所有者发起一次交换请求，
+     * 创建一条待确认（PENDING）订单。仅在已登录、物品已加载且非本人物品时执行。
+     *
+     * @param myItemId 当前用户用于交换的物品ID
+     */
+    fun initiateExchange(myItemId: String) {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val item = _uiState.value.item
+
+        // 守卫：必须已登录、物品已加载、且不是本人物品
+        if (currentUserId == null) {
+            _uiState.update { it.copy(exchangeMessage = "请先登录后再发起交换") }
+            return
+        }
+        if (item == null) {
+            _uiState.update { it.copy(exchangeMessage = "物品信息未加载，无法发起交换") }
+            return
+        }
+        if (item.userId == currentUserId) {
+            _uiState.update { it.copy(exchangeMessage = "不能与自己的物品发起交换") }
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val result = createExchangeOrderUseCase(
+                    myItemId = myItemId,
+                    theirItemId = item.id,
+                    myUserId = currentUserId,
+                    theirUserId = item.userId
+                )
+                if (result.isSuccess) {
+                    _uiState.update { it.copy(exchangeMessage = "交换请求已发送，等待对方确认") }
+                } else {
+                    val reason = result.exceptionOrNull()?.message ?: "未知错误"
+                    _uiState.update { it.copy(exchangeMessage = "发起交换失败: $reason") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(exchangeMessage = "发起交换失败: ${e.message ?: "未知错误"}") }
+            }
+        }
+    }
+
+    /**
+     * 清除一次性交换反馈消息（在Snackbar展示后调用）
+     */
+    fun clearExchangeMessage() {
+        _uiState.update { it.copy(exchangeMessage = null) }
     }
 
     /**

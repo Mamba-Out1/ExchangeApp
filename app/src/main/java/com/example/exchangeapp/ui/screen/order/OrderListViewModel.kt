@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.exchangeapp.domain.model.Order
 import com.example.exchangeapp.domain.model.OrderStatus
+import com.example.exchangeapp.domain.model.ItemStatus
+import com.example.exchangeapp.domain.recommendation.RecommendationEngine
+import com.example.exchangeapp.domain.repository.ItemRepository
 import com.example.exchangeapp.domain.repository.OrderRepository
 import com.example.exchangeapp.domain.service.CurrentUserProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,6 +37,8 @@ import javax.inject.Inject
 @HiltViewModel
 class OrderListViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
+    private val itemRepository: ItemRepository,
+    private val recommendationEngine: RecommendationEngine,
     private val currentUserProvider: CurrentUserProvider
 ) : ViewModel() {
 
@@ -254,6 +259,91 @@ class OrderListViewModel @Inject constructor(
                 _operationState.value = OperationState.Success("订单已取消")
             } catch (e: Exception) {
                 _operationState.value = OperationState.Error("取消失败: ${e.message ?: "未知错误"}")
+            }
+        }
+    }
+
+    /**
+     * 完成交换
+     *
+     * 实现Requirement 8.7: 订单完成后允许User对交换进行评价。
+     * 仅当订单状态为进行中(IN_PROGRESS)时，允许将其推进到已完成(COMPLETED)，
+     * 并记录完成时间，使评价入口可用。
+     *
+     * @param orderId 订单ID
+     */
+    fun completeOrder(orderId: String) {
+        val userId = currentUserProvider.getCurrentUserId()
+        if (userId == null || _operationState.value is OperationState.Loading) {
+            return
+        }
+
+        // 查找订单
+        val order = allOrders.find { it.id == orderId }
+        if (order == null || order.status != OrderStatus.IN_PROGRESS) {
+            _operationState.value = OperationState.Error("订单无法完成")
+            return
+        }
+
+        // 检查用户是否有权限完成此订单
+        if (order.user1Id != userId && order.user2Id != userId) {
+            _operationState.value = OperationState.Error("无权操作此订单")
+            return
+        }
+
+        _operationState.value = OperationState.Loading("完成交换...")
+        operationJob?.cancel()
+        operationJob = viewModelScope.launch {
+            try {
+                // 更新订单状态为已完成，并记录完成时间
+                val now = System.currentTimeMillis()
+                val updatedOrder = order.copy(
+                    status = OrderStatus.COMPLETED,
+                    completedAt = now,
+                    updatedAt = now
+                )
+
+                // 保存到数据库
+                orderRepository.updateOrder(updatedOrder)
+
+                // 交换完成后，将涉及的两件物品标记为已交换(EXCHANGED)，
+                // 使其从"为你推荐"及其他可用物品列表中消失(getAllItems 仅返回 AVAILABLE)。
+                markItemsExchanged(order.item1Id, order.item2Id)
+
+                // 清空推荐缓存，确保下次推荐重算时排除已交换物品，立即反映变化
+                recommendationEngine.recalculateScores()
+
+                // 延迟以显示操作成功动画
+                delay(300)
+
+                // 重新加载订单列表
+                loadOrders()
+                _operationState.value = OperationState.Success("交换已完成")
+            } catch (e: Exception) {
+                _operationState.value = OperationState.Error("完成失败: ${e.message ?: "未知错误"}")
+            }
+        }
+    }
+
+    /**
+     * 将交换涉及的两件物品标记为已交换(EXCHANGED)。
+     *
+     * 物品被标记为 EXCHANGED 后，[ItemRepository.getAllItems] 将不再返回它们
+     * （该查询仅返回状态为 AVAILABLE 的物品），从而使其从"为你推荐"和浏览列表中消失。
+     * 单件物品更新失败不应中断整体流程，因此对每件物品分别捕获异常。
+     */
+    private suspend fun markItemsExchanged(vararg itemIds: String) {
+        val now = System.currentTimeMillis()
+        itemIds.distinct().forEach { itemId ->
+            try {
+                val item = itemRepository.getItemById(itemId) ?: return@forEach
+                if (item.status != ItemStatus.EXCHANGED) {
+                    itemRepository.updateItem(
+                        item.copy(status = ItemStatus.EXCHANGED, updatedAt = now)
+                    )
+                }
+            } catch (e: Exception) {
+                // 静默处理单件物品的更新失败，不影响订单完成与其余物品
             }
         }
     }
