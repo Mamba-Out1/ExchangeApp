@@ -22,6 +22,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
+import com.example.exchangeapp.ui.screen.chat.ChatListScreen
 import com.example.exchangeapp.ui.screen.chat.ChatScreen
 import com.example.exchangeapp.ui.screen.favorites.FavoritesScreen
 import com.example.exchangeapp.ui.screen.home.HomeScreen
@@ -321,6 +322,15 @@ fun ExchangeNavHost(
                 )
             }
             
+            // 聊天会话列表（底部导航"聊天"标签）
+            composable(Routes.CHAT) {
+                ChatListScreen(
+                    onConversationClick = { otherUserId ->
+                        navController.navigate(Routes.chatWithUser(otherUserId))
+                    }
+                )
+            }
+
             // 聊天
             composable(
                 route = Routes.CHAT_WITH_USER,

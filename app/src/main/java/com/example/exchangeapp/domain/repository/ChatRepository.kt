@@ -30,4 +30,14 @@ interface ChatRepository {
      * 观察指定会话的消息流，会话内容变化时实时推送。
      */
     fun observeConversation(conversationId: String): Flow<List<ChatMessage>>
+
+    /**
+     * 获取指定用户的会话列表，每个会话返回其最新的一条消息（按时间倒序）。
+     */
+    suspend fun getConversationsForUser(userId: String): List<ChatMessage>
+
+    /**
+     * 获取指定会话中该用户尚未读取的消息数量。
+     */
+    suspend fun getUnreadCount(conversationId: String, userId: String): Int
 }

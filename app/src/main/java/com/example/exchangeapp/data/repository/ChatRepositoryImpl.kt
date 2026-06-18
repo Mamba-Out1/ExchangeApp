@@ -48,6 +48,14 @@ class ChatRepositoryImpl @Inject constructor(
             .map { entities -> entities.map { it.toModel() } }
     }
 
+    override suspend fun getConversationsForUser(userId: String): List<ChatMessage> {
+        return chatDao.getLatestMessagesForUser(userId).map { it.toModel() }
+    }
+
+    override suspend fun getUnreadCount(conversationId: String, userId: String): Int {
+        return chatDao.getUnreadCountForConversation(conversationId, userId)
+    }
+
     /**
      * 根据两个用户 id 生成会话标识。
      * 对 id 排序后拼接，确保 (a, b) 与 (b, a) 得到相同的会话标识。

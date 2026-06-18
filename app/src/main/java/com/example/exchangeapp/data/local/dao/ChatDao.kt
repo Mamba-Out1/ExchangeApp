@@ -23,4 +23,19 @@ interface ChatDao {
     
     @Query("SELECT COUNT(*) FROM chat_messages WHERE receiverId = :userId AND isRead = 0")
     fun getUnreadCount(userId: String): Flow<Int>
+
+    /**
+     * 获取与指定用户相关的每个会话的最新一条消息。
+     *
+     * 通过子查询取出每个 conversationId 下的最大时间戳，再筛选属于该用户
+     * (作为发送者或接收者) 的消息，按时间倒序返回，用于会话列表展示。
+     */
+    @Query("SELECT * FROM chat_messages WHERE (senderId = :userId OR receiverId = :userId) AND timestamp IN (SELECT MAX(timestamp) FROM chat_messages WHERE senderId = :userId OR receiverId = :userId GROUP BY conversationId) ORDER BY timestamp DESC")
+    suspend fun getLatestMessagesForUser(userId: String): List<ChatMessageEntity>
+
+    /**
+     * 统计指定会话中该用户尚未读取的消息数量。
+     */
+    @Query("SELECT COUNT(*) FROM chat_messages WHERE conversationId = :conversationId AND receiverId = :userId AND isRead = 0")
+    suspend fun getUnreadCountForConversation(conversationId: String, userId: String): Int
 }
