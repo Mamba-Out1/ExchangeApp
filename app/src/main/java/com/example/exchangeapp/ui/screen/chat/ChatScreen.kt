@@ -39,7 +39,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -349,6 +351,18 @@ private fun MessageInputBar(
     onSendText: () -> Unit,
     onPickImage: () -> Unit
 ) {
+    // 使用本地状态承载输入，避免值经 ViewModel StateFlow 回流时打断输入法的
+    // 组合(composing)会话，从而保证中文/拼音等可正常输入 (Requirement 9.4)。
+    var text by remember { mutableStateOf(messageInput) }
+
+    // 当外部值变化(如发送成功后 ViewModel 清空输入)时同步到本地状态；
+    // 用户输入期间 ViewModel 回显相同值，受保护的判断可避免覆盖正在编辑的内容。
+    LaunchedEffect(messageInput) {
+        if (messageInput != text) {
+            text = messageInput
+        }
+    }
+
     Surface(
         tonalElevation = 3.dp,
         shadowElevation = 3.dp
@@ -370,8 +384,11 @@ private fun MessageInputBar(
 
             // 文字输入框 (Requirement 9.4)
             OutlinedTextField(
-                value = messageInput,
-                onValueChange = onMessageInputChange,
+                value = text,
+                onValueChange = {
+                    text = it
+                    onMessageInputChange(it)
+                },
                 modifier = Modifier
                     .weight(1f)
                     .heightIn(max = 120.dp),
@@ -384,7 +401,7 @@ private fun MessageInputBar(
             // 发送按钮 (Requirements 9.4, 9.6)
             IconButton(
                 onClick = onSendText,
-                enabled = messageInput.isNotBlank() && !isSending
+                enabled = text.isNotBlank() && !isSending
             ) {
                 if (isSending) {
                     CircularProgressIndicator(
@@ -395,7 +412,7 @@ private fun MessageInputBar(
                     Icon(
                         imageVector = Icons.Default.Send,
                         contentDescription = "发送",
-                        tint = if (messageInput.isNotBlank()) {
+                        tint = if (text.isNotBlank()) {
                             MaterialTheme.colorScheme.primary
                         } else {
                             MaterialTheme.colorScheme.outline

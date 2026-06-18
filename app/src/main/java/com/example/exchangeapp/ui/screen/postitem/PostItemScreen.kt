@@ -276,39 +276,19 @@ private fun PostItemContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         // 名称输入 (Requirements 6.4, 6.8)
-        OutlinedTextField(
-            value = name,
-            onValueChange = onNameChange,
-            label = { Text("物品名称") },
-            placeholder = { Text("请输入物品名称") },
-            singleLine = true,
+        NameInputField(
+            name = name,
             isError = formErrors.contains("name"),
-            supportingText = {
-                if (formErrors.contains("name")) {
-                    Text("请填写物品名称")
-                }
-            },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            modifier = Modifier.fillMaxWidth()
+            onNameChange = onNameChange
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
         // 描述输入 (Requirements 6.4, 6.8)
-        OutlinedTextField(
-            value = description,
-            onValueChange = onDescriptionChange,
-            label = { Text("物品描述") },
-            placeholder = { Text("请描述物品的成色、规格等信息") },
-            minLines = 3,
-            maxLines = 6,
+        DescriptionInputField(
+            description = description,
             isError = formErrors.contains("description"),
-            supportingText = {
-                if (formErrors.contains("description")) {
-                    Text("请填写物品描述")
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
+            onDescriptionChange = onDescriptionChange
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -572,6 +552,87 @@ private fun RecognitionBanner(
             modifier = Modifier.padding(12.dp)
         )
     }
+}
+
+/**
+ * 名称输入字段：使用本地状态承载输入，避免值经 ViewModel StateFlow 回流时打断
+ * 输入法的组合(composing)会话，从而保证中文/拼音等可正常输入 (Requirement 6.4)。
+ *
+ * AI 识别填充的名称通过 [LaunchedEffect] 在外部值变化时同步到本地状态；
+ * 用户输入期间 ViewModel 回显相同值，受保护的判断可避免覆盖正在编辑的内容。
+ */
+@Composable
+private fun NameInputField(
+    name: String,
+    isError: Boolean,
+    onNameChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var text by remember { mutableStateOf(name) }
+
+    // 仅当外部值(如AI填充)与本地不一致时同步，避免打断正在进行的输入
+    LaunchedEffect(name) {
+        if (name != text) {
+            text = name
+        }
+    }
+
+    OutlinedTextField(
+        value = text,
+        onValueChange = {
+            text = it
+            onNameChange(it)
+        },
+        label = { Text("物品名称") },
+        placeholder = { Text("请输入物品名称") },
+        singleLine = true,
+        isError = isError,
+        supportingText = {
+            if (isError) {
+                Text("请填写物品名称")
+            }
+        },
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+        modifier = modifier.fillMaxWidth()
+    )
+}
+
+/**
+ * 描述输入字段：同样使用本地状态承载输入，保证中文等输入法可正常组合输入 (Requirement 6.4)。
+ */
+@Composable
+private fun DescriptionInputField(
+    description: String,
+    isError: Boolean,
+    onDescriptionChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var text by remember { mutableStateOf(description) }
+
+    LaunchedEffect(description) {
+        if (description != text) {
+            text = description
+        }
+    }
+
+    OutlinedTextField(
+        value = text,
+        onValueChange = {
+            text = it
+            onDescriptionChange(it)
+        },
+        label = { Text("物品描述") },
+        placeholder = { Text("请描述物品的成色、规格等信息") },
+        minLines = 3,
+        maxLines = 6,
+        isError = isError,
+        supportingText = {
+            if (isError) {
+                Text("请填写物品描述")
+            }
+        },
+        modifier = modifier.fillMaxWidth()
+    )
 }
 
 /**
