@@ -6,6 +6,7 @@ package com.example.exchangeapp.ui.navigation
 object Routes {
     // 登录相关路由
     const val LOGIN = "login"
+    const val REGISTER = "register"
     
     // 主界面路由（底部导航栏标签）
     const val HOME = "home"

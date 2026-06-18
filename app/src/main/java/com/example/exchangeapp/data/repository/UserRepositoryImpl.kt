@@ -4,6 +4,7 @@ import com.example.exchangeapp.data.local.dao.UserDao
 import com.example.exchangeapp.data.local.entity.UserEntity
 import com.example.exchangeapp.domain.model.User
 import com.example.exchangeapp.domain.repository.UserRepository
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,6 +20,36 @@ import javax.inject.Singleton
 class UserRepositoryImpl @Inject constructor(
     private val userDao: UserDao
 ) : UserRepository {
+
+    override suspend fun createUser(
+        phone: String,
+        nickname: String,
+        passwordHash: String?,
+        avatar: String?,
+        campusLocation: String
+    ): Result<User> {
+        // 校验手机号唯一性：已注册则返回描述性错误（Requirements 11.4）
+        if (userDao.getUserByPhone(phone) != null) {
+            return Result.failure(IllegalStateException("手机号已注册"))
+        }
+
+        return try {
+            // 生成新用户ID并保存到本地存储（Requirements 2.1）
+            val newUser = User(
+                id = UUID.randomUUID().toString(),
+                phone = phone,
+                nickname = nickname,
+                passwordHash = passwordHash,
+                avatar = avatar,
+                campusLocation = campusLocation,
+                createdAt = System.currentTimeMillis()
+            )
+            userDao.insertUser(newUser.toEntity())
+            Result.success(newUser)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
     override suspend fun getUserById(userId: String): User? {
         return userDao.getUserById(userId)?.toModel()

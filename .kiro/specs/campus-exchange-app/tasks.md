@@ -1,4 +1,4 @@
-# 实现计划: 校园二手物品交换应用
+# Implementation Plan: 校园二手物品交换应用 (Campus Exchange App)
 
 ## Overview
 
@@ -202,6 +202,12 @@
     - 测试错误处理路径
     - _Requirements: 2.8_
 
+  - [x] 9.8 扩展UserRepository支持注册
+    - 在UserRepository接口和UserRepositoryImpl中实现createUser方法
+    - 通过getUserByPhone检查手机号唯一性,已存在时返回错误结果
+    - 生成新用户ID并调用insertUser将新User保存到本地存储
+    - _Requirements: 11.4, 2.1_
+
 - [x] 10. 实现Use Cases
   - [x] 10.1 创建AI识别Use Case
     - 实现RecognizeItemImageUseCase
@@ -244,6 +250,12 @@
     - 测试边界条件
     - _Requirements: 所有相关需求_
 
+  - [x] 10.9 创建RegisterUserUseCase
+    - 实现RegisterUserUseCase封装用户注册业务逻辑
+    - 调用UserRepository.createUser创建新用户账户
+    - 注册成功后返回新建User,失败时返回描述性错误(如手机号已注册)
+    - _Requirements: 11.4, 2.1_
+
 - [x] 11. 实现表单验证
   - [x] 11.1 创建ItemFormValidator
     - 实现validate方法验证物品表单数据
@@ -262,6 +274,18 @@
     - 测试字段边界值
     - _Requirements: 6.8, 14.7_
 
+  - [x] 11.4 创建RegisterFormValidator
+    - 实现validate方法验证注册表单数据(手机号、密码、确认密码、昵称)
+    - 校验手机号格式、密码强度、确认密码与密码一致性、昵称非空
+    - 返回包含所有错误字段的验证结果
+    - _Requirements: 11.2_
+
+  - [ ]* 11.5 编写注册表单验证单元测试
+    - 测试手机号格式校验
+    - 测试密码与确认密码不一致场景
+    - 测试必填字段缺失场景
+    - _Requirements: 11.2_
+
 - [ ] 12. Checkpoint - 验证领域层完整性
   - 确保所有测试通过,如有疑问请询问用户
 
@@ -277,7 +301,7 @@
     - 提供所有Use Case的依赖注入
     - _Requirements: 所有Use Cases_
 
-- [ ] 14. 实现ViewModel层
+- [x] 14. 实现ViewModel层
   - [x] 14.1 实现LoginViewModel
     - 处理用户登录逻辑
     - 管理登录状态(StateFlow)
@@ -331,6 +355,20 @@
     - 使用Turbine测试Flow
     - 测试状态管理逻辑
     - _Requirements: 所有UI相关需求_
+
+  - [x] 14.9 实现RegisterViewModel
+    - 管理注册表单状态(手机号、密码、确认密码、昵称)的StateFlow
+    - 调用RegisterFormValidator验证表单输入并暴露字段级错误
+    - 调用RegisterUserUseCase创建新用户账户
+    - 注册成功后保存Login_State到Storage_Module并暴露成功状态
+    - 处理手机号已存在和注册失败的错误状态
+    - _Requirements: 11.1, 11.2, 11.4, 2.1, 2.4_
+
+  - [ ]* 14.10 编写RegisterViewModel单元测试
+    - 使用mock RegisterUserUseCase测试注册成功流程并验证Login_State保存
+    - 测试手机号已存在场景
+    - 测试表单验证失败场景
+    - _Requirements: 11.4_
 
 - [x] 15. 实现UI层 - 通用组件
   - [x] 15.1 创建通用Composable组件
@@ -413,6 +451,23 @@
     - 测试用户交互流程
     - 测试导航跳转
     - _Requirements: 所有UI需求_
+
+  - [x] 16.10 实现RegisterScreen
+    - 实现注册表单UI(手机号、密码、确认密码、昵称输入框)
+    - 连接RegisterViewModel,显示字段级验证错误
+    - 处理注册成功(跳转主界面)和失败状态(显示错误提示)
+    - _Requirements: 11.1, 11.2, 11.5_
+
+  - [ ]* 16.11 编写RegisterScreen UI测试
+    - 测试注册表单输入与验证提示显示
+    - 测试注册成功后的状态处理
+    - _Requirements: 11.1, 11.2_
+
+  - [x] 16.12 实现登录与注册之间的导航连接
+    - 在Navigation图中添加RegisterScreen路由
+    - 在LoginScreen添加"注册"入口跳转到RegisterScreen
+    - 注册成功后导航到HomeScreen并清除返回栈
+    - _Requirements: 11.1, 11.4_
 
 - [-] 17. 实现权限管理和错误处理
   - [x] 17.1 实现位置权限请求
@@ -507,3 +562,19 @@
   OPENAI_API_ENDPOINT=https://api.openai.com
   ```
 - 所有与位置、相机、存储相关的功能都需要运行时权限,在相应屏幕实现权限请求
+- 用户注册功能(任务9.8、10.9、11.4-11.5、14.9-14.10、16.10-16.12)贯穿Repository、UseCase、表单验证、ViewModel和UI各层,与现有登录功能共享UserRepository和Login_State存储逻辑
+
+## Task Dependency Graph
+
+```json
+{
+  "waves": [
+    { "id": 0, "tasks": ["9.8", "11.4", "5.2", "6.2", "7.2", "11.2", "18.2"] },
+    { "id": 1, "tasks": ["10.9", "11.5", "5.3", "6.3", "7.3", "11.3", "10.8"] },
+    { "id": 2, "tasks": ["14.9", "14.8"] },
+    { "id": 3, "tasks": ["14.10", "16.10"] },
+    { "id": 4, "tasks": ["16.11", "16.12", "16.9"] },
+    { "id": 5, "tasks": ["20.1", "20.2", "20.3"] }
+  ]
+}
+```

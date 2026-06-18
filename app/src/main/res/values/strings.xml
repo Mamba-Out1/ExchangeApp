@@ -11,6 +11,7 @@
     
     <!-- 屏幕标题 -->
     <string name="screen_title_login">登录</string>
+    <string name="screen_title_register">注册</string>
     <string name="screen_title_home">二手物品交换</string>
     <string name="screen_title_post_item">发布物品</string>
     <string name="screen_title_profile">个人中心</string>

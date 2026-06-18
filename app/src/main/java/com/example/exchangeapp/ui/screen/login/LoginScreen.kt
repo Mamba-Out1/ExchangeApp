@@ -18,6 +18,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,6 +53,7 @@ fun LoginScreen(
     onLogin: (phone: String, password: String) -> Unit,
     onLoginSuccess: () -> Unit,
     onResetState: () -> Unit,
+    onNavigateToRegister: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -85,6 +87,7 @@ fun LoginScreen(
             LoginContent(
                 isLoading = loginState is LoginState.Loading,
                 onLogin = onLogin,
+                onNavigateToRegister = onNavigateToRegister,
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -101,6 +104,7 @@ fun LoginScreen(
 private fun LoginContent(
     isLoading: Boolean,
     onLogin: (phone: String, password: String) -> Unit,
+    onNavigateToRegister: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var phoneNumber by remember { mutableStateOf("") }
@@ -167,6 +171,17 @@ private fun LoginContent(
             enabled = canSubmit
         ) {
             Text(text = "登录")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 注册入口：跳转到注册界面 (Requirement 11.1)
+        TextButton(
+            onClick = onNavigateToRegister,
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(text = "还没有账号？注册")
         }
     }
 }

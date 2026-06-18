@@ -45,6 +45,8 @@ import com.example.exchangeapp.ui.screen.profile.OrderCountState
 import com.example.exchangeapp.ui.screen.profile.ProfileScreen
 import com.example.exchangeapp.ui.screen.profile.ProfileViewModel
 import com.example.exchangeapp.ui.screen.profile.PublishedItemsState
+import com.example.exchangeapp.ui.screen.register.RegisterScreen
+import com.example.exchangeapp.ui.screen.register.RegisterViewModel
 import com.example.exchangeapp.ui.screen.profile.UserState
 
 /**
@@ -82,6 +84,39 @@ fun ExchangeNavHost(
                     navController.navigate(Routes.HOME) {
                         // 清除登录屏幕，防止返回
                         popUpTo(Routes.LOGIN) {
+                            inclusive = true
+                        }
+                    }
+                },
+                onResetState = { viewModel.resetState() },
+                onNavigateToRegister = {
+                    // 跳转到注册界面 (Requirement 11.1)
+                    navController.navigate(Routes.REGISTER)
+                }
+            )
+        }
+
+        // 注册屏幕
+        composable(Routes.REGISTER) {
+            val viewModel: RegisterViewModel = hiltViewModel()
+            val registerState by viewModel.registerState.collectAsStateWithLifecycle()
+            val fieldErrors by viewModel.fieldErrors.collectAsStateWithLifecycle()
+
+            RegisterScreen(
+                registerState = registerState,
+                fieldErrors = fieldErrors,
+                onRegister = { phone, password, confirmPassword, nickname ->
+                    viewModel.updatePhone(phone)
+                    viewModel.updatePassword(password)
+                    viewModel.updateConfirmPassword(confirmPassword)
+                    viewModel.updateNickname(nickname)
+                    viewModel.register()
+                },
+                onRegisterSuccess = {
+                    // 注册成功后导航到主界面并清除返回栈，
+                    // 防止用户返回到登录/注册页 (Requirement 11.4)
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(0) {
                             inclusive = true
                         }
                     }

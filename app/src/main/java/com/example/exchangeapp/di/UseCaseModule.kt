@@ -13,10 +13,12 @@ import com.example.exchangeapp.domain.usecase.GetMatchedItemsUseCase
 import com.example.exchangeapp.domain.usecase.GetRecommendedItemsUseCase
 import com.example.exchangeapp.domain.usecase.MarkMessagesAsReadUseCase
 import com.example.exchangeapp.domain.usecase.RecognizeItemImageUseCase
+import com.example.exchangeapp.domain.usecase.RegisterUserUseCase
 import com.example.exchangeapp.domain.usecase.SaveItemUseCase
 import com.example.exchangeapp.domain.usecase.SendMessageUseCase
 import com.example.exchangeapp.domain.usecase.ToggleFavoriteUseCase
 import com.example.exchangeapp.domain.validation.ItemFormValidator
+import com.example.exchangeapp.domain.validation.RegisterFormValidator
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -80,6 +82,19 @@ object UseCaseModule {
     @Singleton
     fun provideItemFormValidator(): ItemFormValidator {
         return ItemFormValidator()
+    }
+    
+    /**
+     * 提供RegisterFormValidator实例
+     * 
+     * 注册表单验证器，用于验证注册时的表单数据(手机号、密码、确认密码、昵称)
+     * 
+     * @return RegisterFormValidator实例
+     */
+    @Provides
+    @Singleton
+    fun provideRegisterFormValidator(): RegisterFormValidator {
+        return RegisterFormValidator()
     }
     
     /**
@@ -254,5 +269,21 @@ object UseCaseModule {
         currentUserProvider: com.example.exchangeapp.domain.service.CurrentUserProvider
     ): ToggleFavoriteUseCase {
         return ToggleFavoriteUseCase(userInteractionRepository, currentUserProvider)
+    }
+
+    /**
+     * 提供RegisterUserUseCase实例
+     *
+     * 用户注册Use Case，封装新用户账户创建业务逻辑
+     *
+     * @param userRepository 用户仓库
+     * @return RegisterUserUseCase实例
+     */
+    @Provides
+    @Singleton
+    fun provideRegisterUserUseCase(
+        userRepository: com.example.exchangeapp.domain.repository.UserRepository
+    ): RegisterUserUseCase {
+        return RegisterUserUseCase(userRepository)
     }
 }
