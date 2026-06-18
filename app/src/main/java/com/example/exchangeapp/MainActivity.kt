@@ -9,7 +9,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -49,8 +48,11 @@ fun CampusExchangeApp() {
         route.startsWith(Routes.CHAT)
     } ?: false
     
-    // 简单的登录状态检查（实际应用中应该从ViewModel或SharedPreferences获取）
-    val isLoggedIn = remember { false } // 临时值，实际应该从持久化存储获取
+    // 登录状态：登录/注册成功后会跳转到主图并清空返回栈，登出会跳回登录页并清空返回栈，
+    // 因此“当前不在登录/注册页”即代表已登录。以此驱动底部导航栏的显隐。
+    val isLoggedIn = currentRoute != null &&
+        currentRoute != Routes.LOGIN &&
+        currentRoute != Routes.REGISTER
     
     Scaffold(
         modifier = Modifier.fillMaxSize(),
