@@ -2,6 +2,8 @@ package com.example.exchangeapp.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.exchangeapp.data.local.dao.ChatDao
 import com.example.exchangeapp.data.local.dao.ItemDao
 import com.example.exchangeapp.data.local.dao.OrderDao
@@ -24,13 +26,25 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
-    
+
+    /**
+     * 数据库迁移：版本2 -> 版本3。
+     *
+     * 为 orders 表新增可空的 rating 列(评分)，用于持久化已完成订单的评价。
+     * 使用 INTEGER 类型且不指定默认值(可空)，以匹配实体中 `val rating: Int? = null`。
+     */
+    private val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE orders ADD COLUMN rating INTEGER")
+        }
+    }
+
     /**
      * 提供AppDatabase单例实例
      * 
      * 配置:
      * - 数据库名称: exchange_app.db
-     * - 版本: 2
+     * - 版本: 3
      * - 不导出Schema以提高性能
      * 
      * @param context 应用上下文
@@ -44,6 +58,7 @@ object DatabaseModule {
             klass = AppDatabase::class.java,
             name = "exchange_app.db"
         )
+        .addMigrations(MIGRATION_2_3)
         .fallbackToDestructiveMigration()
         .build()
     }

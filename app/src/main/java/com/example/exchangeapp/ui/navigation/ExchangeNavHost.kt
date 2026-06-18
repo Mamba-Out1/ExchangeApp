@@ -33,6 +33,8 @@ import com.example.exchangeapp.ui.screen.home.LoadMoreState
 import com.example.exchangeapp.ui.screen.home.RefreshState
 import com.example.exchangeapp.ui.screen.login.LoginScreen
 import com.example.exchangeapp.ui.screen.login.LoginViewModel
+import com.example.exchangeapp.ui.screen.order.OrderDetailScreen
+import com.example.exchangeapp.ui.screen.order.OrderDetailViewModel
 import com.example.exchangeapp.ui.screen.order.OrderListScreen
 import com.example.exchangeapp.ui.screen.order.OrderListViewModel
 import com.example.exchangeapp.ui.screen.order.OrdersState
@@ -301,7 +303,8 @@ fun ExchangeNavHost(
                 OrderListScreen(
                     uiState = uiState,
                     onOrderClick = { orderId ->
-                        // TODO: 导航到订单详情页(订单详情界面由后续任务实现)
+                        // 导航到订单详情页 (Requirement 8.4)
+                        navController.navigate(Routes.orderDetail(orderId))
                     },
                     onConfirmOrder = { orderId ->
                         viewModel.confirmOrder(orderId)
@@ -409,6 +412,36 @@ fun ExchangeNavHost(
                     onMatchedItemClick = { matchedItemId ->
                         // 导航到匹配物品的详情页
                         navController.navigate(Routes.itemDetail(matchedItemId))
+                    }
+                )
+            }
+
+            // 订单详情 (Requirements 8.4, 8.6, 8.7)
+            composable(
+                route = Routes.ORDER_DETAIL_WITH_ID,
+                arguments = listOf(
+                    navArgument("orderId") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+                val viewModel: OrderDetailViewModel = hiltViewModel()
+                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+                // 进入屏幕时加载订单详情
+                LaunchedEffect(orderId) {
+                    if (orderId.isNotEmpty()) {
+                        viewModel.load(orderId)
+                    }
+                }
+
+                OrderDetailScreen(
+                    uiState = uiState,
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onRate = { rating ->
+                        // 评价订单 (Requirement 8.7)
+                        viewModel.rateOrder(rating)
                     }
                 )
             }

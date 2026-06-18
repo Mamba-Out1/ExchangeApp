@@ -2,6 +2,9 @@ package com.example.exchangeapp.ui.screen.postitem
 
 import android.graphics.BitmapFactory
 import android.util.Base64
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -57,12 +60,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.exchangeapp.ui.component.CameraStoragePermissionRequester
 import com.example.exchangeapp.ui.component.LocationPermissionRequester
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 发布物品屏幕
@@ -113,6 +119,31 @@ fun PostItemScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    // 系统相册图片选择器(AndroidX Photo Picker)：选择图片后读取字节并交由ViewModel
+    // 压缩+Base64编码。Photo Picker本身无需存储权限，但此处保留既有权限流以维持一致体验。
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    // 在IO线程读取选中图片的字节流 (Requirement 6.2)
+                    val bytes = withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    }
+                    if (bytes != null) {
+                        viewModel.addImageFromBytes(bytes)
+                    } else {
+                        snackbarHostState.showSnackbar("图片读取失败")
+                    }
+                } catch (e: Exception) {
+                    snackbarHostState.showSnackbar("图片读取失败")
+                }
+            }
+        }
+    }
 
     // 请求位置权限以记录发布物品的位置 (Requirement 15.1)；
     // 拒绝时由LocationService回退到默认校区位置 (Requirement 15.6)。
@@ -125,8 +156,11 @@ fun PostItemScreen(
         onPermissionResult = { granted ->
             requestImagePermission = false
             if (granted) {
-                // 权限通过后再打开图片选择入口
+                // 权限通过后打开系统相册图片选择器(仅图片) (Requirement 6.2)
                 onAddImageClick()
+                launcher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
             } else {
                 // 优雅处理权限拒绝场景：提示用户无法添加图片
                 scope.launch {

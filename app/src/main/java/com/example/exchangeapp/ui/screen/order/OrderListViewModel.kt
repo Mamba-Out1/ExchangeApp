@@ -274,7 +274,12 @@ class OrderListViewModel @Inject constructor(
      * 获取对方用户的联系方式（占位实现）
      *
      * 实现Requirement 8.6: 订单状态为进行中时显示对方User的联系方式
-     * 注意：这里需要与UserRepository集成获取用户联系方式
+     *
+     * 说明：真实的对方联系方式查询与展示现已迁移到订单详情页
+     * ([com.example.exchangeapp.ui.screen.order.OrderDetailScreen] /
+     * [com.example.exchangeapp.ui.screen.order.OrderDetailViewModel])，
+     * 其通过 UserRepository 解析对方User并展示真实手机号。
+     * 此处保留占位实现以避免破坏既有调用方。
      *
      * @param orderId 订单ID
      * @return 对方用户的联系方式（手机号），如果无法获取返回null

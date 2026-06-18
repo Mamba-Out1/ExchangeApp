@@ -53,7 +53,8 @@ class OrderRepositoryImpl @Inject constructor(
             status = status.name,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            completedAt = completedAt
+            completedAt = completedAt,
+            rating = rating
         )
     }
 
@@ -70,7 +71,8 @@ class OrderRepositoryImpl @Inject constructor(
             status = decodeStatus(status),
             createdAt = createdAt,
             updatedAt = updatedAt,
-            completedAt = completedAt
+            completedAt = completedAt,
+            rating = rating
         )
     }
 

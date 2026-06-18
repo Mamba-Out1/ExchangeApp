@@ -18,9 +18,11 @@ object Routes {
     
     // 详情和子页面路由
     const val ITEM_DETAIL = "itemdetail"
+    const val ORDER_DETAIL = "orderdetail"
     
     // 带参数的路由模式
     const val ITEM_DETAIL_WITH_ID = "$ITEM_DETAIL/{itemId}"
+    const val ORDER_DETAIL_WITH_ID = "$ORDER_DETAIL/{orderId}"
     const val CHAT_WITH_USER = "$CHAT/{userId}"
     
     // 路由分组
@@ -29,6 +31,10 @@ object Routes {
     // 构建带参数的路径
     fun itemDetail(itemId: String): String {
         return "$ITEM_DETAIL/$itemId"
+    }
+    
+    fun orderDetail(orderId: String): String {
+        return "$ORDER_DETAIL/$orderId"
     }
     
     fun chatWithUser(userId: String): String {

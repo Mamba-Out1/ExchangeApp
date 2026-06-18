@@ -22,5 +22,6 @@ data class OrderEntity(
     val status: String,
     val createdAt: Long,
     val updatedAt: Long,
-    val completedAt: Long?
+    val completedAt: Long?,
+    val rating: Int? = null
 )
