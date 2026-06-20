@@ -19,7 +19,10 @@ data class ImageAnalysisRequest(
     val messages: List<Message>,
     
     @SerialName("max_tokens")
-    val maxTokens: Int = 500
+    val maxTokens: Int = 500,
+
+    @SerialName("response_format")
+    val responseFormat: ResponseFormat = ResponseFormat()
 )
 
 /**
@@ -66,4 +69,10 @@ data class Content(
 data class ImageUrl(
     @SerialName("url")
     val url: String
+)
+
+@Serializable
+data class ResponseFormat(
+    @SerialName("type")
+    val type: String = "json_object"
 )

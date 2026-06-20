@@ -72,6 +72,8 @@ class ItemRepositoryImpl @Inject constructor(
             estimatedPrice = estimatedPrice,
             images = json.encodeToString(images),
             tags = json.encodeToString(tags),
+            wantedItemName = wantedItemName,
+            wantedTags = json.encodeToString(wantedTags),
             latitude = location?.latitude,
             longitude = location?.longitude,
             address = location?.address,
@@ -96,7 +98,9 @@ class ItemRepositoryImpl @Inject constructor(
             location = toLocation(),
             status = decodeStatus(status),
             createdAt = createdAt,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            wantedItemName = wantedItemName,
+            wantedTags = decodeStringList(wantedTags)
         )
     }
 

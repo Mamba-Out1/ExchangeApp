@@ -220,8 +220,9 @@ object RepositoryModule {
     @Singleton
     fun provideAIRepositoryImpl(
         apiService: com.example.exchangeapp.data.remote.api.OpenAIApiService,
-        @ApiKey apiKey: String
+        @ApiKey apiKey: String,
+        @AiModel aiModel: String
     ): AIRepositoryImpl {
-        return AIRepositoryImpl(apiService, apiKey)
+        return AIRepositoryImpl(apiService, apiKey, aiModel)
     }
 }

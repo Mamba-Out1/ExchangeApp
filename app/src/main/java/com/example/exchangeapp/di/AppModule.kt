@@ -29,7 +29,7 @@ object AppModule {
     @Singleton
     @ApiKey
     fun provideApiKey(): String {
-        return BuildConfig.OPENAI_API_KEY
+        return BuildConfig.DASHSCOPE_API_KEY
     }
     
     /**
@@ -43,7 +43,14 @@ object AppModule {
     @Singleton
     @ApiEndpoint
     fun provideApiEndpoint(): String {
-        return BuildConfig.OPENAI_API_ENDPOINT
+        return BuildConfig.DASHSCOPE_API_ENDPOINT
+    }
+
+    @Provides
+    @Singleton
+    @AiModel
+    fun provideAiModel(): String {
+        return BuildConfig.DASHSCOPE_MODEL
     }
     
     /**

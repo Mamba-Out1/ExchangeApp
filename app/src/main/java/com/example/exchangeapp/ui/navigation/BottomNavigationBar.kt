@@ -44,6 +44,11 @@ fun BottomNavigationBar(
                 iconName = "add"
             ),
             BottomNavItem(
+                route = Routes.BARTER,
+                label = "易物",
+                iconName = "swap"
+            ),
+            BottomNavItem(
                 route = Routes.CHAT,
                 label = stringResource(R.string.bottom_nav_chat),
                 iconName = "chat"
@@ -136,6 +141,11 @@ fun BottomAppNavigationBar(
                     route = Routes.CHAT,
                     label = stringResource(R.string.bottom_nav_chat),
                     iconName = "chat"
+                ),
+                BottomNavItem(
+                    route = Routes.BARTER,
+                    label = "易物",
+                    iconName = "swap"
                 ),
                 BottomNavItem(
                     route = Routes.ORDERS,

@@ -24,6 +24,7 @@ import androidx.navigation.navArgument
 import androidx.navigation.navigation
 import com.example.exchangeapp.ui.screen.chat.ChatListScreen
 import com.example.exchangeapp.ui.screen.chat.ChatScreen
+import com.example.exchangeapp.ui.screen.barter.BarterScreen
 import com.example.exchangeapp.ui.screen.favorites.FavoritesScreen
 import com.example.exchangeapp.ui.screen.home.HomeScreen
 import com.example.exchangeapp.ui.screen.home.HomeViewModel
@@ -199,6 +200,14 @@ fun ExchangeNavHost(
                     },
                     onAddImageClick = {
                         // 占位符：图片选择由权限/相册任务(17.x)实现
+                    }
+                )
+            }
+
+            composable(Routes.BARTER) {
+                BarterScreen(
+                    onItemClick = { itemId ->
+                        navController.navigate(Routes.itemDetail(itemId))
                     }
                 )
             }

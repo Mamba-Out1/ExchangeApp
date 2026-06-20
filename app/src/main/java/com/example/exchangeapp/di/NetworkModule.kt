@@ -98,7 +98,7 @@ object NetworkModule {
         val contentType = "application/json".toMediaType()
         
         return Retrofit.Builder()
-            .baseUrl(apiEndpoint)
+            .baseUrl(apiEndpoint.ensureTrailingSlash())
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
@@ -113,5 +113,9 @@ object NetworkModule {
     @Singleton
     fun provideOpenAIApiService(retrofit: Retrofit): OpenAIApiService {
         return retrofit.create(OpenAIApiService::class.java)
+    }
+
+    private fun String.ensureTrailingSlash(): String {
+        return if (endsWith("/")) this else "$this/"
     }
 }

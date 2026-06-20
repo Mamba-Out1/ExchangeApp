@@ -19,3 +19,10 @@ annotation class ApiKey
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class ApiEndpoint
+
+/**
+ * 限定符：DashScope/Qwen model name.
+ */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class AiModel

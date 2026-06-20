@@ -29,11 +29,18 @@ android {
             properties.load(FileInputStream(localProperties))
         }
         
-        // Configure OpenAI API settings
-        buildConfigField("String", "OPENAI_API_KEY", 
-            "\"${properties.getProperty("OPENAI_API_KEY") ?: ""}\"")
-        buildConfigField("String", "OPENAI_API_ENDPOINT", 
-            "\"${properties.getProperty("OPENAI_API_ENDPOINT") ?: "https://api.openai.com"}\"")
+        // Configure DashScope/Qwen API settings. Values come from local.properties
+        // so API keys are not hard-coded into source.
+        buildConfigField("String", "DASHSCOPE_API_KEY",
+            "\"${properties.getProperty("DASHSCOPE_API_KEY")
+                ?: properties.getProperty("OPENAI_API_KEY")
+                ?: ""}\"")
+        buildConfigField("String", "DASHSCOPE_API_ENDPOINT",
+            "\"${properties.getProperty("DASHSCOPE_API_ENDPOINT")
+                ?: properties.getProperty("OPENAI_API_ENDPOINT")
+                ?: "https://dashscope.aliyuncs.com/compatible-mode/"}\"")
+        buildConfigField("String", "DASHSCOPE_MODEL",
+            "\"${properties.getProperty("DASHSCOPE_MODEL") ?: "qwen3.7-plus"}\"")
     }
 
     // Test configuration

@@ -22,7 +22,7 @@ import com.example.exchangeapp.data.local.entity.UserInteractionEntity
         ChatMessageEntity::class,
         UserInteractionEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

@@ -5,9 +5,13 @@
 ## SDK Location (if needed)
 # sdk.dir=/path/to/Android/sdk
 
-## OpenAI API Configuration
-# Required: Your OpenAI API Key
-OPENAI_API_KEY=sk-your-api-key-here
+## DashScope/Qwen API Configuration
+# Required: Your Alibaba Cloud Model Studio API Key
+DASHSCOPE_API_KEY=sk-your-api-key-here
 
-# Optional: OpenAI API Endpoint (default: https://api.openai.com)
-OPENAI_API_ENDPOINT=https://api.openai.com
+# Optional: OpenAI-compatible DashScope endpoint.
+# For workspace regional endpoints, set the base URL that contains /api/v1 or /compatible-mode/.
+DASHSCOPE_API_ENDPOINT=https://dashscope.aliyuncs.com/compatible-mode/
+
+# Optional: Qwen model name
+DASHSCOPE_MODEL=qwen3.7-plus

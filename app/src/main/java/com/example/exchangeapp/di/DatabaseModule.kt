@@ -39,6 +39,13 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE items ADD COLUMN wantedItemName TEXT NOT NULL DEFAULT ''")
+            db.execSQL("ALTER TABLE items ADD COLUMN wantedTags TEXT NOT NULL DEFAULT '[]'")
+        }
+    }
+
     /**
      * 提供AppDatabase单例实例
      * 
@@ -58,7 +65,7 @@ object DatabaseModule {
             klass = AppDatabase::class.java,
             name = "exchange_app.db"
         )
-        .addMigrations(MIGRATION_2_3)
+        .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
         .fallbackToDestructiveMigration()
         .build()
     }

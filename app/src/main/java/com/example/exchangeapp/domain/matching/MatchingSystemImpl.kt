@@ -42,14 +42,16 @@ class MatchingSystemImpl(
 ) : MatchingSystem {
 
     companion object {
-        /** 标签相似度权重。 */
-        const val TAG_WEIGHT = 0.6
+        const val SOURCE_WANTS_TARGET_WEIGHT = 0.45
 
-        /** 关键词相似度权重。 */
-        const val KEYWORD_WEIGHT = 0.4
+        const val TARGET_WANTS_SOURCE_WEIGHT = 0.35
+
+        const val ITEM_TAG_WEIGHT = 0.12
+
+        const val KEYWORD_WEIGHT = 0.08
 
         /** 最低匹配阈值，分数低于或等于该值的物品将被过滤。 */
-        const val MIN_MATCHING_THRESHOLD = 0.3
+        const val MIN_MATCHING_THRESHOLD = 0.2
 
         /** 缓存有效期（毫秒）：5 分钟。匹配结果对实时性要求较低，可短时缓存。 */
         const val CACHE_VALIDITY_MS = 5L * 60L * 1000L
@@ -140,10 +142,17 @@ class MatchingSystemImpl(
      * **验证需求: Requirements 4.2, 4.3, 4.4**
      */
     internal fun calculateMatchingScore(source: Item, target: Item): Double {
-        val tagScore = calculateTagSimilarity(source.tags, target.tags)
+        val sourceWantsTargetScore = calculateTagSimilarity(source.wantedTags, target.tags)
+        val targetWantsSourceScore = calculateTagSimilarity(target.wantedTags, source.tags)
+        val itemTagScore = calculateTagSimilarity(source.tags, target.tags)
         val keywordScore = calculateKeywordSimilarity(source.description, target.description)
 
-        return (tagScore * TAG_WEIGHT) + (keywordScore * KEYWORD_WEIGHT)
+        return (
+            sourceWantsTargetScore * SOURCE_WANTS_TARGET_WEIGHT +
+                targetWantsSourceScore * TARGET_WANTS_SOURCE_WEIGHT +
+                itemTagScore * ITEM_TAG_WEIGHT +
+                keywordScore * KEYWORD_WEIGHT
+            ).coerceIn(0.0, 1.0)
     }
 
     /**

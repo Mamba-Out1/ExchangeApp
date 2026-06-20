@@ -11,6 +11,7 @@ object Routes {
     // 主界面路由（底部导航栏标签）
     const val HOME = "home"
     const val POST_ITEM = "postitem"
+    const val BARTER = "barter"
     const val PROFILE = "profile" 
     const val ORDERS = "order"
     const val CHAT = "chat"
@@ -26,7 +27,7 @@ object Routes {
     const val CHAT_WITH_USER = "$CHAT/{userId}"
     
     // 路由分组
-    val mainTabs = listOf(HOME, POST_ITEM, PROFILE, ORDERS, CHAT, FAVORITES)
+    val mainTabs = listOf(HOME, POST_ITEM, BARTER, PROFILE, ORDERS, CHAT, FAVORITES)
     
     // 构建带参数的路径
     fun itemDetail(itemId: String): String {

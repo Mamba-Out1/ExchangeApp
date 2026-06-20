@@ -14,5 +14,7 @@ data class Item(
     val location: Location?,
     val status: ItemStatus,
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val wantedItemName: String = "",
+    val wantedTags: List<String> = emptyList()
 )

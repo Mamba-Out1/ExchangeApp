@@ -62,7 +62,7 @@ class PostItemViewModel @Inject constructor(
     companion object {
         private const val MAX_IMAGES = 9 // 最多9张图片 (Requirement 6.3)
         private const val MIN_IMAGES = 1 // 至少1张图片 (Requirement 6.2)
-        private const val RECOGNITION_TIMEOUT_MS = 3000L // 3秒识别超时 (Requirement 1.7)
+        private const val RECOGNITION_TIMEOUT_MS = 30000L
     }
 
     // 表单数据状态
@@ -172,12 +172,18 @@ class PostItemViewModel @Inject constructor(
     fun addImageFromBytes(imageBytes: ByteArray) {
         if (imageBytes.isEmpty()) return
 
+        val wasEmpty = _images.value.isEmpty()
+
         // 上传前压缩图片（降采样 + JPEG质量压缩），减小存储与传输体积 (Requirements 6.2, 6.3)
         val compressedBytes = ImageCompressor.compress(imageBytes)
 
         // 将压缩后的图片字节进行Base64编码（NO_WRAP避免插入换行符）
         val imageBase64 = Base64.encodeToString(compressedBytes, Base64.NO_WRAP)
         addImage(imageBase64)
+
+        if (wasEmpty && _images.value.isNotEmpty()) {
+            recognizeItemImage()
+        }
     }
 
     /**
@@ -194,12 +200,13 @@ class PostItemViewModel @Inject constructor(
 
         // 使用第一张图片进行识别
         val firstImageBase64 = imagesList.first()
-        val imageBytes = Base64.decode(firstImageBase64, Base64.DEFAULT)
+        val imageBytes = decodeBase64Image(firstImageBase64)
         
         recognitionJob?.cancel()
         recognitionJob = viewModelScope.launch {
             try {
                 _recognitionState.value = RecognitionState.Loading
+                kotlinx.coroutines.yield()
                 
                 // 使用withTimeout确保3秒内完成识别 (Requirement 1.7)
                 val result = kotlinx.coroutines.withTimeout(RECOGNITION_TIMEOUT_MS) {
@@ -223,6 +230,10 @@ class PostItemViewModel @Inject constructor(
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                 // 超时处理
                 _recognitionState.value = RecognitionState.Error("识别超时，请稍后重试")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                if (_recognitionState.value is RecognitionState.Loading) {
+                    _recognitionState.value = RecognitionState.Idle
+                }
             } catch (e: Exception) {
                 _recognitionState.value = RecognitionState.Error("识别失败: ${e.message ?: "未知错误"}")
             }
@@ -399,6 +410,18 @@ class PostItemViewModel @Inject constructor(
      */
     fun isAiFilled(): Boolean {
         return isAiFilled
+    }
+
+    private fun decodeBase64Image(imageBase64: String): ByteArray {
+        return try {
+            Base64.decode(imageBase64, Base64.DEFAULT)
+        } catch (e: Exception) {
+            try {
+                java.util.Base64.getDecoder().decode(imageBase64)
+            } catch (ignored: IllegalArgumentException) {
+                imageBase64.toByteArray()
+            }
+        } ?: imageBase64.toByteArray()
     }
 }
 
