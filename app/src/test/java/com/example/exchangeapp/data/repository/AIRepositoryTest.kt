@@ -8,8 +8,8 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import retrofit2.Response
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -33,7 +33,7 @@ class AIRepositoryTest {
     private lateinit var repository: AIRepository
     private val testApiKey = "sk-test-key-12345"
     
-    @Before
+    @BeforeEach
     fun setup() {
         apiService = mockk()
         repository = AIRepositoryImpl(apiService, testApiKey)

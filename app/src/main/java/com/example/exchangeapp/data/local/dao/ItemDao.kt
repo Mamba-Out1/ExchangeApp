@@ -27,6 +27,9 @@ interface ItemDao {
     @Query("DELETE FROM items WHERE id = :itemId")
     suspend fun deleteItem(itemId: String)
     
+    // 注意: tags 使用前导通配符 LIKE '%' || :tag || '%'，无法命中索引（全表扫描）。
+    // 如需进一步优化标签检索，应改用规范化的标签关联表或 FTS，超出本任务范围，故保持原行为不变。
+    // status = 'AVAILABLE' 过滤可由 ItemEntity 上的 (status, createdAt) 复合索引加速。
     @Query("SELECT * FROM items WHERE tags LIKE '%' || :tag || '%' AND status = 'AVAILABLE'")
     suspend fun getItemsByTag(tag: String): List<ItemEntity>
 }

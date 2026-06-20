@@ -120,12 +120,14 @@ dependencies {
     
     // Unit Testing
     testImplementation(libs.junit)
+    testImplementation(kotlin("test"))
     testImplementation(libs.kotest.runner.junit5)
     testImplementation(libs.kotest.assertions.core)
     testImplementation(libs.kotest.property)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
+    testImplementation(libs.okhttp.mockwebserver)
     
     // Android Testing
     androidTestImplementation(libs.androidx.junit)

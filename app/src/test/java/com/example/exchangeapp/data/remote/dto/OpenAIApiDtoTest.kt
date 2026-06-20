@@ -2,7 +2,7 @@ package com.example.exchangeapp.data.remote.dto
 
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -14,6 +14,7 @@ class OpenAIApiDtoTest {
     private val json = Json {
         ignoreUnknownKeys = true
         prettyPrint = false
+        encodeDefaults = true
     }
 
     @Test
