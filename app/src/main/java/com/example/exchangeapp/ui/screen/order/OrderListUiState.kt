@@ -19,5 +19,6 @@ data class OrderListUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val operationMessage: String? = null
+    val operationMessage: String? = null,
+    val currentUserId: String? = null
 )

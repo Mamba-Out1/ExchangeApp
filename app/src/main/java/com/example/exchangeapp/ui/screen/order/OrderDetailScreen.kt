@@ -28,32 +28,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.exchangeapp.domain.model.Item
 import com.example.exchangeapp.domain.model.Order
 import com.example.exchangeapp.domain.model.OrderStatus
+import com.example.exchangeapp.domain.model.User
 import com.example.exchangeapp.ui.component.ErrorView
 import com.example.exchangeapp.ui.component.LoadingView
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * 订单详情屏幕
- *
- * 展示单个订单的完整信息。无状态(stateless)组件，通过[OrderDetailUiState]
- * 与回调驱动，由导航层连接[OrderDetailViewModel]。
- *
- * **Validates: Requirements 8.4, 8.6, 8.7**
- *
- * Requirements:
- * - 8.4: 显示订单详情(订单号、状态、时间、交换物品)
- * - 8.6: 进行中订单显示对方User的联系方式
- * - 8.7: 完成订单允许User评价(5星)
- *
- * @param uiState 订单详情的UI状态
- * @param onBack 返回回调
- * @param onRate 评价回调，参数为评分(1-5) (Requirement 8.7)
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrderDetailScreen(
@@ -66,7 +52,7 @@ fun OrderDetailScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(text = "订单详情") },
+                title = { Text(text = "交换记录详情") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -83,9 +69,8 @@ fun OrderDetailScreen(
             .padding(innerPadding)
 
         when {
-            uiState.isLoading -> {
-                LoadingView(modifier = contentModifier)
-            }
+            uiState.isLoading -> LoadingView(modifier = contentModifier)
+
             uiState.error != null && uiState.order == null -> {
                 ErrorView(
                     title = "加载失败",
@@ -94,12 +79,13 @@ fun OrderDetailScreen(
                     modifier = contentModifier
                 )
             }
+
             uiState.order != null -> {
                 OrderDetailContent(
                     order = uiState.order,
-                    item1Name = uiState.item1Name,
-                    item2Name = uiState.item2Name,
-                    counterpartContact = uiState.counterpartContact,
+                    item1 = uiState.item1,
+                    item2 = uiState.item2,
+                    counterpartUser = uiState.counterpartUser,
                     onRate = onRate,
                     modifier = contentModifier
                 )
@@ -108,45 +94,48 @@ fun OrderDetailScreen(
     }
 }
 
-/**
- * 订单详情的内容区域（无状态）
- */
 @Composable
 private fun OrderDetailContent(
     order: Order,
-    item1Name: String?,
-    item2Name: String?,
-    counterpartContact: String?,
+    item1: Item?,
+    item2: Item?,
+    counterpartUser: User?,
     onRate: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.padding(16.dp)) {
-        // 订单号 + 状态徽章 (Requirement 8.3, 8.4)
+    Column(
+        modifier = modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "订单号: ${order.id.take(8)}",
+                text = "记录 ${order.id.take(8)}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
             OrderStatusBadge(status = order.status)
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 交换物品信息
         DetailCard(title = "交换物品") {
-            DetailRow(label = "物品一", value = item1Name ?: order.item1Id)
-            Spacer(modifier = Modifier.height(8.dp))
-            DetailRow(label = "物品二", value = item2Name ?: order.item2Id)
+            ExchangeItemRow(label = "发起方物品", item = item1, fallbackId = order.item1Id)
+            Spacer(modifier = Modifier.height(10.dp))
+            ExchangeItemRow(label = "接收方物品", item = item2, fallbackId = order.item2Id)
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        DetailCard(title = "对方用户") {
+            DetailRow(label = "昵称", value = counterpartUser?.nickname ?: "未知用户")
+            Spacer(modifier = Modifier.height(8.dp))
+            DetailRow(label = "手机号", value = counterpartUser?.phone ?: "暂无联系方式")
+            if (!counterpartUser?.campusLocation.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                DetailRow(label = "校区", value = counterpartUser?.campusLocation ?: "")
+            }
+        }
 
-        // 时间信息
         DetailCard(title = "时间信息") {
             DetailRow(label = "创建时间", value = formatTimestamp(order.createdAt))
             Spacer(modifier = Modifier.height(8.dp))
@@ -157,20 +146,7 @@ private fun OrderDetailContent(
             }
         }
 
-        // 对方联系方式：仅进行中订单展示 (Requirement 8.6)
-        if (order.status == OrderStatus.IN_PROGRESS) {
-            Spacer(modifier = Modifier.height(12.dp))
-            DetailCard(title = "对方联系方式") {
-                DetailRow(
-                    label = "手机号",
-                    value = counterpartContact ?: "暂无联系方式"
-                )
-            }
-        }
-
-        // 评价区域：仅已完成订单展示 (Requirement 8.7)
         if (order.status == OrderStatus.COMPLETED) {
-            Spacer(modifier = Modifier.height(12.dp))
             DetailCard(title = "评价") {
                 RatingBar(
                     rating = order.rating ?: 0,
@@ -179,7 +155,7 @@ private fun OrderDetailContent(
                 if (order.rating != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "已评价: ${order.rating}星",
+                        text = "已评价 ${order.rating} 星",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -189,11 +165,44 @@ private fun OrderDetailContent(
     }
 }
 
-/**
- * 评价星级组件：5颗可点击的星，已评分的部分显示实心星。
- *
- * **Validates: Requirement 8.7**
- */
+@Composable
+private fun ExchangeItemRow(
+    label: String,
+    item: Item?,
+    fallbackId: String
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = item?.name ?: fallbackId,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        if (item != null) {
+            Text(
+                text = item.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (item.tags.isNotEmpty()) {
+                Text(
+                    text = item.tags.take(5).joinToString(" ") { "#$it" },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun RatingBar(
     rating: Int,
@@ -203,8 +212,6 @@ private fun RatingBar(
     Row(modifier = modifier) {
         for (star in 1..5) {
             IconButton(onClick = { onRate(star) }) {
-                // 核心图标集仅提供实心 Star，未评分的星以灰色实心星表示，
-                // 避免引入 material-icons-extended 依赖。
                 Icon(
                     imageVector = Icons.Default.Star,
                     contentDescription = "评分 $star 星",
@@ -217,9 +224,6 @@ private fun RatingBar(
     }
 }
 
-/**
- * 详情信息卡片容器。
- */
 @Composable
 private fun DetailCard(
     title: String,
@@ -227,7 +231,7 @@ private fun DetailCard(
     content: @Composable () -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -247,9 +251,6 @@ private fun DetailCard(
     }
 }
 
-/**
- * 标签-值的单行展示。
- */
 @Composable
 private fun DetailRow(
     label: String,
@@ -273,14 +274,6 @@ private fun DetailRow(
     }
 }
 
-/**
- * 订单状态徽章
- *
- * 以带颜色的标签展示订单状态（待确认、进行中、已完成、已取消）。
- * 与[OrderListScreen]保持一致的视觉风格，此处独立实现以保持组件自包含。
- *
- * **Validates: Requirement 8.3**
- */
 @Composable
 private fun OrderStatusBadge(
     status: OrderStatus,
@@ -308,9 +301,6 @@ private fun OrderStatusBadge(
     }
 }
 
-/**
- * 将时间戳格式化为可读的日期时间字符串
- */
 private fun formatTimestamp(timestamp: Long): String {
     val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
     return formatter.format(Date(timestamp))

@@ -2,7 +2,6 @@ package com.example.exchangeapp.ui.screen.order
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,30 +41,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * 订单列表屏幕
- *
- * 显示和管理用户的交换订单。无状态(stateless)组件，
- * 通过[OrderListUiState]与回调函数驱动，由导航层连接[OrderListViewModel]。
- *
- * **Validates: Requirements 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7**
- *
- * Requirements:
- * - 8.1: 显示订单管理界面
- * - 8.2: 显示用户的所有交换订单
- * - 8.3: 显示订单状态（待确认、进行中、已完成、已取消）
- * - 8.4: 点击订单显示详情
- * - 8.5: 待确认订单允许确认或取消
- * - 8.6: 进行中订单显示对方联系方式
- * - 8.7: 完成订单允许评价
- *
- * @param uiState 订单列表的UI状态
- * @param onOrderClick 点击订单回调，参数为订单ID (Requirement 8.4)
- * @param onConfirmOrder 确认订单回调，参数为订单ID (Requirement 8.5)
- * @param onCancelOrder 取消订单回调，参数为订单ID (Requirement 8.5)
- * @param onRateOrder 评价订单回调，参数为订单ID和评分 (Requirement 8.7)
- * @param onRefresh 下拉刷新回调
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrderListScreen(
@@ -81,11 +55,8 @@ fun OrderListScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // 订单操作结果(确认/取消/评价)通过Snackbar反馈，避免打断列表浏览
     LaunchedEffect(uiState.operationMessage) {
-        uiState.operationMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-        }
+        uiState.operationMessage?.let { snackbarHostState.showSnackbar(it) }
     }
 
     Scaffold(
@@ -97,11 +68,10 @@ fun OrderListScreen(
             .padding(innerPadding)
 
         when {
-            // 初始加载状态（尚无任何数据）
             uiState.isLoading && uiState.orders.isEmpty() -> {
                 LoadingView(modifier = contentModifier)
             }
-            // 错误状态且无数据，提供重试入口
+
             uiState.error != null && uiState.orders.isEmpty() -> {
                 ErrorView(
                     title = "加载失败",
@@ -110,7 +80,7 @@ fun OrderListScreen(
                     modifier = contentModifier
                 )
             }
-            // 空状态：没有任何订单 (Requirement 8.1)
+
             uiState.orders.isEmpty() -> {
                 PullToRefreshBox(
                     isRefreshing = uiState.isRefreshing,
@@ -120,15 +90,15 @@ fun OrderListScreen(
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         item {
                             EmptyStateView(
-                                title = "暂无订单",
-                                description = "您还没有任何交换订单",
+                                title = "暂无交换记录",
+                                description = "发起或收到以物易物请求后，会在这里显示",
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
                     }
                 }
             }
-            // 成功状态 - 显示订单列表 (Requirement 8.2)
+
             else -> {
                 PullToRefreshBox(
                     isRefreshing = uiState.isRefreshing,
@@ -142,6 +112,7 @@ fun OrderListScreen(
                         ) { order ->
                             OrderCard(
                                 order = order,
+                                currentUserId = uiState.currentUserId,
                                 onOrderClick = { onOrderClick(order.id) },
                                 onConfirmOrder = { onConfirmOrder(order.id) },
                                 onCancelOrder = { onCancelOrder(order.id) },
@@ -157,18 +128,10 @@ fun OrderListScreen(
     }
 }
 
-/**
- * 订单卡片组件
- *
- * 显示单个订单的状态、时间信息和可用操作。
- *
- * - 整张卡片可点击，跳转到订单详情 (Requirement 8.4)
- * - 待确认订单显示"确认"和"取消"按钮 (Requirement 8.5)
- * - 已完成订单显示"评价"按钮 (Requirement 8.7)
- */
 @Composable
 private fun OrderCard(
     order: Order,
+    currentUserId: String?,
     onOrderClick: () -> Unit,
     onConfirmOrder: () -> Unit,
     onCancelOrder: () -> Unit,
@@ -177,7 +140,7 @@ private fun OrderCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -187,17 +150,14 @@ private fun OrderCard(
             .fillMaxWidth()
             .clickable(onClick = onOrderClick)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            // 顶部：订单编号 + 状态徽章 (Requirement 8.3)
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "订单号: ${order.id.take(8)}",
+                    text = "交换记录 ${order.id.take(8)}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -206,14 +166,12 @@ private fun OrderCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 创建时间
             Text(
                 text = "创建时间: ${formatTimestamp(order.createdAt)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // 完成时间（已完成订单显示）
             if (order.status == OrderStatus.COMPLETED && order.completedAt != null) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -223,30 +181,46 @@ private fun OrderCard(
                 )
             }
 
-            // 操作按钮区域
             when (order.status) {
-                // 待确认：确认 / 取消 (Requirement 8.5)
                 OrderStatus.PENDING -> {
                     Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = onCancelOrder,
-                            modifier = Modifier.weight(1f)
+                    if (order.user2Id == currentUserId) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(text = "取消")
+                            OutlinedButton(
+                                onClick = onCancelOrder,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(text = "拒绝")
+                            }
+                            Button(
+                                onClick = onConfirmOrder,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(text = "确认交换")
+                            }
                         }
-                        Button(
-                            onClick = onConfirmOrder,
-                            modifier = Modifier.weight(1f)
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "确认")
+                            Text(
+                                text = "等待对方确认",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedButton(onClick = onCancelOrder) {
+                                Text(text = "取消请求")
+                            }
                         }
                     }
                 }
-                // 已完成：评价 (Requirement 8.7)
+
                 OrderStatus.COMPLETED -> {
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
@@ -256,7 +230,7 @@ private fun OrderCard(
                         Text(text = "评价")
                     }
                 }
-                // 进行中：完成交换 (Requirement 8.7)
+
                 OrderStatus.IN_PROGRESS -> {
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
@@ -266,20 +240,13 @@ private fun OrderCard(
                         Text(text = "完成交换")
                     }
                 }
-                // 已取消：无内联操作按钮
-                else -> Unit
+
+                OrderStatus.CANCELLED -> Unit
             }
         }
     }
 }
 
-/**
- * 订单状态徽章
- *
- * 以带颜色的标签展示订单状态（待确认、进行中、已完成、已取消）。
- *
- * **Validates: Requirement 8.3**
- */
 @Composable
 private fun OrderStatusBadge(
     status: OrderStatus,
@@ -307,13 +274,9 @@ private fun OrderStatusBadge(
     }
 }
 
-/**
- * 将时间戳格式化为可读的日期时间字符串
- */
 private fun formatTimestamp(timestamp: Long): String {
     val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
     return formatter.format(Date(timestamp))
 }
 
-/** 评价默认分值，实际评分交互由订单详情/评价界面实现 */
 private const val DEFAULT_RATING = 5

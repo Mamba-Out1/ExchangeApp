@@ -1,6 +1,7 @@
 package com.example.exchangeapp.ui.screen.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +27,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -38,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -47,34 +50,23 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.exchangeapp.R
 import com.example.exchangeapp.domain.model.Item
+import com.example.exchangeapp.domain.model.ItemStatus
+import com.example.exchangeapp.domain.model.Order
 import com.example.exchangeapp.domain.model.User
 import com.example.exchangeapp.ui.component.ErrorView
 import com.example.exchangeapp.ui.component.ItemCard
 import com.example.exchangeapp.ui.component.LoadingView
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-/**
- * 个人中心屏幕
- *
- * 显示用户信息、已发布物品列表和收藏列表
- *
- * **Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 10.5**
- *
- * Requirements:
- * - 7.1: 显示个人中心界面
- * - 7.2: 显示头像、昵称、联系方式
- * - 7.3: 显示用户发布的所有物品列表
- * - 7.4: 显示收藏列表
- * - 7.5: 点击已发布物品允许编辑或删除
- * - 7.6: 点击收藏物品跳转到详情页
- * - 7.7: 显示历史交换记录数量
- * - 10.5: 在个人中心显示完整的Favorite_List
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     uiState: ProfileUiState,
     onItemClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
+    onOrderClick: (String) -> Unit,
     onEditItem: (String) -> Unit,
     onDeleteItem: (String) -> Unit,
     onLogout: () -> Unit,
@@ -83,7 +75,6 @@ fun ProfileScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // 在已有数据的情况下出现错误时，通过Snackbar提示，避免覆盖内容
     LaunchedEffect(uiState.error) {
         if (uiState.error != null && uiState.user != null) {
             snackbarHostState.showSnackbar(uiState.error)
@@ -109,11 +100,10 @@ fun ProfileScreen(
             .padding(innerPadding)
 
         when {
-            // 初始加载状态（尚无任何数据）
             uiState.isLoading && uiState.user == null -> {
                 LoadingView(modifier = contentModifier)
             }
-            // 错误状态且无数据，提供重试入口
+
             uiState.error != null && uiState.user == null -> {
                 ErrorView(
                     title = "加载失败",
@@ -122,12 +112,13 @@ fun ProfileScreen(
                     modifier = contentModifier
                 )
             }
-            // 内容状态
+
             else -> {
                 ProfileContent(
                     uiState = uiState,
                     onItemClick = onItemClick,
                     onFavoriteClick = onFavoriteClick,
+                    onOrderClick = onOrderClick,
                     onEditItem = onEditItem,
                     onDeleteItem = onDeleteItem,
                     onLogout = onLogout,
@@ -138,28 +129,20 @@ fun ProfileScreen(
     }
 }
 
-/**
- * 个人中心内容区
- *
- * 使用LazyColumn渲染个人信息头部、已发布物品列表和收藏列表
- */
 @Composable
 private fun ProfileContent(
     uiState: ProfileUiState,
     onItemClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
+    onOrderClick: (String) -> Unit,
     onEditItem: (String) -> Unit,
     onDeleteItem: (String) -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // 删除确认对话框状态：保存待删除的物品ID
     var itemPendingDeletion by remember { mutableStateOf<String?>(null) }
 
-    LazyColumn(
-        modifier = modifier
-    ) {
-        // 个人信息头部 (Requirement 7.2, 7.7)
+    LazyColumn(modifier = modifier) {
         item(key = "profile_header") {
             ProfileHeader(
                 user = uiState.user,
@@ -169,7 +152,6 @@ private fun ProfileContent(
             )
         }
 
-        // 已发布物品标题 (Requirement 7.3)
         item(key = "published_header") {
             SectionHeader(
                 title = "我发布的物品",
@@ -186,7 +168,6 @@ private fun ProfileContent(
                 )
             }
         } else {
-            // 已发布物品列表 (Requirement 7.3, 7.5)
             items(
                 items = uiState.postedItems,
                 key = { "published_${it.id}" }
@@ -201,7 +182,34 @@ private fun ProfileContent(
             }
         }
 
-        // 收藏列表标题 (Requirement 7.4, 10.5)
+        item(key = "history_header") {
+            SectionHeader(
+                title = "历史交换记录",
+                count = uiState.completedOrders.size,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+
+        if (uiState.completedOrders.isEmpty()) {
+            item(key = "history_empty") {
+                EmptySectionHint(
+                    text = "完成交换后，记录会显示在这里",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+        } else {
+            items(
+                items = uiState.completedOrders,
+                key = { "history_${it.id}" }
+            ) { order ->
+                ExchangeHistoryCard(
+                    order = order,
+                    onClick = { onOrderClick(order.id) },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+        }
+
         item(key = "favorites_header") {
             SectionHeader(
                 title = "我的收藏",
@@ -218,7 +226,6 @@ private fun ProfileContent(
                 )
             }
         } else {
-            // 收藏物品列表 (Requirement 7.4, 7.6, 10.5)
             items(
                 items = uiState.favoriteItems,
                 key = { "favorite_${it.id}" }
@@ -234,13 +241,11 @@ private fun ProfileContent(
             }
         }
 
-        // 底部留白
         item(key = "bottom_spacer") {
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
 
-    // 删除确认对话框 (Requirement 7.5)
     itemPendingDeletion?.let { pendingId ->
         AlertDialog(
             onDismissRequest = { itemPendingDeletion = null },
@@ -265,14 +270,6 @@ private fun ProfileContent(
     }
 }
 
-/**
- * 个人信息头部
- *
- * 显示用户头像、昵称、联系方式、校区以及历史交换记录数量
- *
- * Requirement 7.2: 显示头像、昵称、联系方式
- * Requirement 7.7: 显示历史交换记录数量
- */
 @Composable
 private fun ProfileHeader(
     user: User?,
@@ -281,7 +278,7 @@ private fun ProfileHeader(
     modifier: Modifier = Modifier
 ) {
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -289,14 +286,11 @@ private fun ProfileHeader(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // 头像
                 Box(
                     modifier = Modifier
                         .size(64.dp)
@@ -326,10 +320,7 @@ private fun ProfileHeader(
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                // 昵称和联系方式
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = user?.nickname ?: "未登录",
                         style = MaterialTheme.typography.titleLarge,
@@ -337,48 +328,25 @@ private fun ProfileHeader(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-
                     Spacer(modifier = Modifier.height(4.dp))
-
-                    // 联系方式（手机号）
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(android.R.drawable.ic_menu_call),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = user?.phone ?: "-",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (!user?.campusLocation.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = user?.phone ?: "-",
+                            text = user?.campusLocation ?: "",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-
-                    if (!user?.campusLocation.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                painter = painterResource(android.R.drawable.ic_menu_mylocation),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = user?.campusLocation ?: "",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 历史交换记录数量 (Requirement 7.7)
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
@@ -406,9 +374,6 @@ private fun ProfileHeader(
     }
 }
 
-/**
- * 区块标题，带数量统计
- */
 @Composable
 private fun SectionHeader(
     title: String,
@@ -433,9 +398,6 @@ private fun SectionHeader(
     }
 }
 
-/**
- * 区块空状态提示
- */
 @Composable
 private fun EmptySectionHint(
     text: String,
@@ -449,13 +411,6 @@ private fun EmptySectionHint(
     )
 }
 
-/**
- * 已发布物品卡片
- *
- * 在ItemCard基础上增加编辑和删除操作按钮
- *
- * Requirement 7.5: 点击已发布物品允许编辑或删除
- */
 @Composable
 private fun PublishedItemCard(
     item: Item,
@@ -465,44 +420,140 @@ private fun PublishedItemCard(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
-        ItemCard(
-            item = item,
-            isFavorite = false,
-            distance = null,
-            onItemClick = onItemClick,
-            onFavoriteClick = onItemClick,
-            modifier = Modifier.fillMaxWidth()
-        )
+        Box {
+            ItemCard(
+                item = item,
+                isFavorite = false,
+                distance = null,
+                onItemClick = onItemClick,
+                onFavoriteClick = onItemClick,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (item.status == ItemStatus.EXCHANGED) {
+                StatusBadge(
+                    text = "已完成交换",
+                    backgroundColor = Color(0xFFE8F5E9),
+                    contentColor = Color(0xFF2E7D32),
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(12.dp)
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 编辑 / 删除 操作行
-        Row(
-            horizontalArrangement = Arrangement.End,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            OutlinedButton(onClick = onEditClick) {
-                Icon(
-                    painter = painterResource(android.R.drawable.ic_menu_edit),
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(text = "编辑")
-            }
+        if (item.status == ItemStatus.EXCHANGED) {
+            Text(
+                text = "该物品已完成交换，已从主页下架。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            Row(
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedButton(onClick = onEditClick) {
+                    Icon(
+                        painter = painterResource(android.R.drawable.ic_menu_edit),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "编辑")
+                }
 
-            Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
-            OutlinedButton(onClick = onDeleteClick) {
-                Icon(
-                    painter = painterResource(android.R.drawable.ic_menu_delete),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(text = "删除", color = MaterialTheme.colorScheme.error)
+                OutlinedButton(onClick = onDeleteClick) {
+                    Icon(
+                        painter = painterResource(android.R.drawable.ic_menu_delete),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "删除", color = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }
+}
+
+@Composable
+private fun ExchangeHistoryCard(
+    order: Order,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "交换记录 ${order.id.take(8)}",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                StatusBadge(
+                    text = "已完成",
+                    backgroundColor = Color(0xFFE8F5E9),
+                    contentColor = Color(0xFF2E7D32)
+                )
+            }
+            Text(
+                text = "完成时间: ${formatTimestamp(order.completedAt ?: order.updatedAt)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "点击查看交换物品和对方用户信息",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatusBadge(
+    text: String,
+    backgroundColor: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = backgroundColor,
+        contentColor = contentColor,
+        modifier = modifier
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
+private fun formatTimestamp(timestamp: Long): String {
+    val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+    return formatter.format(Date(timestamp))
 }

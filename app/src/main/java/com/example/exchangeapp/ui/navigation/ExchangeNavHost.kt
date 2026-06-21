@@ -152,6 +152,7 @@ fun ExchangeNavHost(
                     is ItemsState.Empty -> com.example.exchangeapp.ui.screen.home.HomeUiState()
                     is ItemsState.Loading -> com.example.exchangeapp.ui.screen.home.HomeUiState(isLoading = true)
                     is ItemsState.Success -> com.example.exchangeapp.ui.screen.home.HomeUiState(
+                        recommendedItems = currentItemsState.recommendedItems,
                         items = currentItemsState.items,
                         isLoading = false,
                         isRefreshing = refreshState is RefreshState.Loading,
@@ -228,6 +229,8 @@ fun ExchangeNavHost(
                         ?: emptyList(),
                     favoriteItems = (favoriteItemsState as? FavoriteItemsState.Success)?.items
                         ?: emptyList(),
+                    completedOrders = (orderCountState as? OrderCountState.Success)?.completedOrders
+                        ?: emptyList(),
                     isLoading = userState is UserState.Loading,
                     error = (userState as? UserState.Error)?.message,
                     exchangeCount = (orderCountState as? OrderCountState.Success)?.count ?: 0
@@ -257,6 +260,9 @@ fun ExchangeNavHost(
                     onFavoriteClick = { itemId ->
                         // 通过ViewModel记录并跳转到收藏物品详情 (Requirement 7.6)
                         viewModel.viewFavoriteItem(itemId)
+                    },
+                    onOrderClick = { orderId ->
+                        navController.navigate(Routes.orderDetail(orderId))
                     },
                     onEditItem = { itemId ->
                         viewModel.editItem(itemId)
@@ -292,19 +298,23 @@ fun ExchangeNavHost(
                 }
                 val uiState = when (currentOrdersState) {
                     is OrdersState.Loading -> com.example.exchangeapp.ui.screen.order.OrderListUiState(
-                        isLoading = true
+                        isLoading = true,
+                        currentUserId = viewModel.currentUserId()
                     )
                     is OrdersState.Empty -> com.example.exchangeapp.ui.screen.order.OrderListUiState(
                         isRefreshing = refreshState is OrderRefreshState.Loading,
-                        operationMessage = operationMessage
+                        operationMessage = operationMessage,
+                        currentUserId = viewModel.currentUserId()
                     )
                     is OrdersState.Success -> com.example.exchangeapp.ui.screen.order.OrderListUiState(
                         orders = currentOrdersState.orders,
                         isRefreshing = refreshState is OrderRefreshState.Loading,
-                        operationMessage = operationMessage
+                        operationMessage = operationMessage,
+                        currentUserId = viewModel.currentUserId()
                     )
                     is OrdersState.Error -> com.example.exchangeapp.ui.screen.order.OrderListUiState(
-                        error = currentOrdersState.message
+                        error = currentOrdersState.message,
+                        currentUserId = viewModel.currentUserId()
                     )
                 }
 

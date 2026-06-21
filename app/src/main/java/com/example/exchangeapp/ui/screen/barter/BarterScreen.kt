@@ -132,20 +132,29 @@ fun BarterScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            item {
-                BarterPostForm(
-                    uiState = uiState,
-                    onAddImage = { requestImagePermission = true },
-                    onRemoveImage = viewModel::removeImage,
-                    onNameChange = viewModel::updateName,
-                    onDescriptionChange = viewModel::updateDescription,
-                    onPriceChange = viewModel::updatePrice,
-                    onTagsChange = viewModel::updateTags,
-                    onWantedNameChange = viewModel::updateWantedItemName,
-                    onWantedTagsChange = viewModel::updateWantedTags,
-                    onParseWantedTags = viewModel::parseWantedTags,
-                    onPost = viewModel::postBarterItem
-                )
+            if (!uiState.isShowingMatchResults) {
+                item {
+                    BarterPostForm(
+                        uiState = uiState,
+                        onAddImage = { requestImagePermission = true },
+                        onRemoveImage = viewModel::removeImage,
+                        onNameChange = viewModel::updateName,
+                        onDescriptionChange = viewModel::updateDescription,
+                        onPriceChange = viewModel::updatePrice,
+                        onTagsChange = viewModel::updateTags,
+                        onWantedNameChange = viewModel::updateWantedItemName,
+                        onWantedTagsChange = viewModel::updateWantedTags,
+                        onParseWantedTags = viewModel::parseWantedTags,
+                        onPost = viewModel::postBarterItem
+                    )
+                }
+            } else {
+                item {
+                    MatchResultHeader(
+                        selectedItem = uiState.myItems.firstOrNull { it.id == uiState.selectedItemId },
+                        onPostMore = viewModel::showPostForm
+                    )
+                }
             }
 
             item {
@@ -174,7 +183,9 @@ fun BarterScreen(
                 SectionTitle("智能匹配")
                 if (uiState.isLoadingMatches) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
                         horizontalArrangement = Arrangement.Center
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
@@ -185,10 +196,40 @@ fun BarterScreen(
             }
 
             items(uiState.matches, key = { it.item.id }) { match ->
-                MatchRow(match = match, onClick = { onItemClick(match.item.id) })
+                MatchRow(
+                    match = match,
+                    isRequesting = uiState.isRequestingExchange,
+                    onClick = { onItemClick(match.item.id) },
+                    onRequestExchange = { viewModel.requestExchange(match.item.id) }
+                )
             }
 
             item { Spacer(modifier = Modifier.height(20.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun MatchResultHeader(
+    selectedItem: Item?,
+    onPostMore: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("匹配结果", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                text = selectedItem?.let { "正在为「${it.name}」匹配合适的交换物品" }
+                    ?: "请选择一件易物商品查看匹配结果",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            OutlinedButton(onClick = onPostMore) {
+                Text("继续发布易物商品")
+            }
         }
     }
 }
@@ -240,7 +281,7 @@ private fun BarterPostForm(
             value = uiState.price,
             onValueChange = onPriceChange,
             label = { Text("估价") },
-            prefix = { Text("￥") },
+            prefix = { Text("¥") },
             isError = uiState.formErrors.contains("price"),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
@@ -290,7 +331,7 @@ private fun BarterPostForm(
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 Spacer(modifier = Modifier.width(8.dp))
             }
-            Text(if (uiState.isPosting) "发布中..." else "发布易物商品")
+            Text(if (uiState.isPosting) "发布中..." else "发布并智能匹配")
         }
     }
 }
@@ -302,7 +343,9 @@ private fun ImageStrip(
     onRemoveImage: (Int) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         images.forEachIndexed { index, base64 ->
@@ -356,7 +399,9 @@ private fun EditableTags(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
         Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             tags.forEach { tag ->
@@ -393,26 +438,50 @@ private fun EditableTags(
 }
 
 @Composable
-private fun MatchRow(match: MatchedItem, onClick: () -> Unit) {
+private fun MatchRow(
+    match: MatchedItem,
+    isRequesting: Boolean,
+    onClick: () -> Unit,
+    onRequestExchange: () -> Unit
+) {
     val item = match.item
     Surface(
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                 Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("${(match.matchingScore * 100).toInt()}%", color = MaterialTheme.colorScheme.primary)
             }
-            Text(item.description, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                item.description,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             if (item.wantedItemName.isNotBlank()) {
                 Text("TA想要：${item.wantedItemName}", style = MaterialTheme.typography.bodySmall)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 item.tags.take(4).forEach { tag ->
                     Text("#$tag", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onClick, modifier = Modifier.weight(1f)) {
+                    Text("查看详情")
+                }
+                Button(
+                    onClick = onRequestExchange,
+                    enabled = !isRequesting,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(if (isRequesting) "发送中" else "发起交换")
                 }
             }
         }

@@ -2,6 +2,7 @@ package com.example.exchangeapp.data.remote.api
 
 import com.example.exchangeapp.data.remote.dto.ImageAnalysisRequest
 import com.example.exchangeapp.data.remote.dto.ImageAnalysisResponse
+import kotlinx.serialization.json.JsonObject
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.Header
@@ -23,5 +24,11 @@ interface OpenAIApiService {
     suspend fun analyzeImage(
         @Header("Authorization") authorization: String,
         @Body request: ImageAnalysisRequest
+    ): Response<ImageAnalysisResponse>
+
+    @POST("v1/chat/completions")
+    suspend fun analyzeText(
+        @Header("Authorization") authorization: String,
+        @Body request: JsonObject
     ): Response<ImageAnalysisResponse>
 }

@@ -30,7 +30,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.example.exchangeapp.domain.model.Item
 import com.example.exchangeapp.ui.theme.LocalCustomColors
 
@@ -118,8 +117,8 @@ private fun ItemImageSection(
             .background(LocalCustomColors.current.cardImageBackground)
     ) {
         if (imageUrl != null) {
-            AsyncImage(
-                model = imageUrl,
+            StoredItemImage(
+                image = imageUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier

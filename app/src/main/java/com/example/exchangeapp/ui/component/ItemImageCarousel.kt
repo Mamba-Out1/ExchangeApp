@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.example.exchangeapp.ui.theme.LocalCustomColors
 import kotlinx.coroutines.delay
 
@@ -80,8 +79,8 @@ fun ItemImageCarousel(
             .then(if (onImageClick != null) Modifier.clickable(onClick = onImageClick) else Modifier)
     ) {
         // 显示当前图片
-        AsyncImage(
-            model = images[currentIndex],
+        StoredItemImage(
+            image = images[currentIndex],
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
