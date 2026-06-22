@@ -11,30 +11,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * [MatchingSystem] 的基于规则算法实现。
- *
- * Matching_Score 计算公式：
- * ```
- * score = (tagScore * TAG_WEIGHT) + (keywordScore * KEYWORD_WEIGHT)
- * ```
- * 其中：
- * - tagScore 为源物品与目标物品标签集合的 Jaccard 相似度。
- * - keywordScore 为两者描述分词后 token 集合的 Jaccard 相似度。
- *
- * ## 性能优化
- * - **缓存机制**：匹配结果按 (sourceItemId, limit) 缓存，缓存在 [CACHE_VALIDITY_MS]
- *   内有效，命中时直接返回，避免对相同源物品重复计算相似度。
- * - **异步计算**：相似度计算在 [computationDispatcher]（默认 [Dispatchers.Default]）
- *   线程池上执行，避免阻塞主线程；候选物品评分通过协程并行计算，
- *   以确保在 2 秒内完成匹配计算（**验证需求: Requirements 4.7**）。
- *
- * @property itemRepository 物品仓库，用于获取源物品与候选物品。
- * @property computationDispatcher 用于执行相似度计算的调度器，默认 [Dispatchers.Default]。
- * @property timeProvider 当前时间提供者（毫秒），用于缓存失效判断，便于测试注入。
- *
- * **验证需求: Requirements 4.1, 4.2, 4.3, 4.4, 4.5, 4.7**
- */
 class MatchingSystemImpl(
     private val itemRepository: ItemRepository,
     private val computationDispatcher: CoroutineDispatcher = Dispatchers.Default,
@@ -43,36 +19,26 @@ class MatchingSystemImpl(
 
     companion object {
         const val SOURCE_WANTS_TARGET_WEIGHT = 0.45
-
         const val TARGET_WANTS_SOURCE_WEIGHT = 0.35
-
         const val ITEM_TAG_WEIGHT = 0.12
-
         const val KEYWORD_WEIGHT = 0.08
 
-        /** 最低匹配阈值，分数低于或等于该值的物品将被过滤。 */
-        const val MIN_MATCHING_THRESHOLD = 0.2
+        const val MIN_MATCHING_THRESHOLD = 0.05
+        const val CACHE_VALIDITY_MS = 60L * 1000L
 
-        /** 缓存有效期（毫秒）：5 分钟。匹配结果对实时性要求较低，可短时缓存。 */
-        const val CACHE_VALIDITY_MS = 5L * 60L * 1000L
-
-        /** 并行评分的最小候选物品数量阈值，低于该值时串行计算以避免协程开销。 */
         private const val PARALLEL_THRESHOLD = 32
     }
 
-    /** 缓存键：源物品与数量限制共同决定一份匹配结果。 */
     private data class CacheKey(
         val sourceItemId: String,
         val limit: Int
     )
 
-    /** 缓存条目：保存匹配结果及其生成时间戳。 */
     private data class CacheEntry(
         val items: List<MatchedItem>,
         val timestamp: Long
     )
 
-    /** 匹配结果缓存，线程安全。 */
     private val matchingCache = ConcurrentHashMap<CacheKey, CacheEntry>()
 
     override suspend fun getMatchedItems(
@@ -81,18 +47,17 @@ class MatchingSystemImpl(
     ): List<MatchedItem> {
         val cacheKey = CacheKey(sourceItemId, limit)
         matchingCache[cacheKey]?.let { entry ->
-            if (isCacheValid(entry)) {
-                return entry.items
-            }
+            if (isCacheValid(entry)) return entry.items
         }
 
         val sourceItem = itemRepository.getItemById(sourceItemId) ?: return emptyList()
         val candidateItems = itemRepository.getAllItems()
             .filter { it.id != sourceItemId }
+            .filter { it.userId != sourceItem.userId }
 
         val result = withContext(computationDispatcher) {
             scoreCandidates(sourceItem, candidateItems)
-                .filter { it.matchingScore > MIN_MATCHING_THRESHOLD }
+                .filter { it.matchingScore >= MIN_MATCHING_THRESHOLD }
                 .sortedByDescending { it.matchingScore }
                 .take(limit)
         }
@@ -101,12 +66,6 @@ class MatchingSystemImpl(
         return result
     }
 
-    /**
-     * 对候选物品并行计算匹配分数。
-     *
-     * 当候选物品数量超过 [PARALLEL_THRESHOLD] 时，将物品分块并通过协程并行计算，
-     * 以加速大规模候选集的处理；否则串行计算以避免协程调度开销。
-     */
     private suspend fun scoreCandidates(
         source: Item,
         candidates: List<Item>
@@ -129,22 +88,19 @@ class MatchingSystemImpl(
         }
     }
 
-    /**
-     * 判断缓存条目是否仍然有效（生成至今未超过 [CACHE_VALIDITY_MS]）。
-     */
     private fun isCacheValid(entry: CacheEntry): Boolean {
         return timeProvider() - entry.timestamp < CACHE_VALIDITY_MS
     }
 
-    /**
-     * 计算源物品与目标物品的 Matching_Score。
-     *
-     * **验证需求: Requirements 4.2, 4.3, 4.4**
-     */
     internal fun calculateMatchingScore(source: Item, target: Item): Double {
-        val sourceWantsTargetScore = calculateTagSimilarity(source.wantedTags, target.tags)
-        val targetWantsSourceScore = calculateTagSimilarity(target.wantedTags, source.tags)
-        val itemTagScore = calculateTagSimilarity(source.tags, target.tags)
+        val sourceWants = source.wantedSignalTags()
+        val targetWants = target.wantedSignalTags()
+        val sourceIdentity = source.identitySignalTags()
+        val targetIdentity = target.identitySignalTags()
+
+        val sourceWantsTargetScore = calculateTagSimilarity(sourceWants, targetIdentity)
+        val targetWantsSourceScore = calculateTagSimilarity(targetWants, sourceIdentity)
+        val itemTagScore = calculateTagSimilarity(sourceIdentity, targetIdentity)
         val keywordScore = calculateKeywordSimilarity(source.description, target.description)
 
         return (
@@ -155,51 +111,132 @@ class MatchingSystemImpl(
             ).coerceIn(0.0, 1.0)
     }
 
-    /**
-     * 计算两个标签集合的 Jaccard 相似度（交集大小 / 并集大小）。
-     *
-     * 任一标签列表为空时返回 0.0。
-     *
-     * **验证需求: Requirements 4.3**
-     */
-    internal fun calculateTagSimilarity(tags1: List<String>, tags2: List<String>): Double {
-        if (tags1.isEmpty() || tags2.isEmpty()) return 0.0
+    internal fun calculateTagSimilarity(tags1: Collection<String>, tags2: Collection<String>): Double {
+        val left = expandTags(tags1)
+        val right = expandTags(tags2)
+        if (left.isEmpty() || right.isEmpty()) return 0.0
 
-        val intersection = tags1.intersect(tags2.toSet()).size
-        val union = tags1.union(tags2).size
-
+        val intersection = left.intersect(right).size
+        val union = left.union(right).size
         return intersection.toDouble() / union.toDouble()
     }
 
-    /**
-     * 计算两段描述文本关键词的 Jaccard 相似度。
-     *
-     * 先对两段文本分词得到 token 集合，再计算交集大小 / 并集大小。
-     * 任一文本分词结果为空时返回 0.0。
-     *
-     * **验证需求: Requirements 4.4**
-     */
     internal fun calculateKeywordSimilarity(desc1: String, desc2: String): Double {
-        val words1 = tokenize(desc1)
-        val words2 = tokenize(desc2)
-
+        val words1 = expandTags(tokenize(desc1))
+        val words2 = expandTags(tokenize(desc2))
         if (words1.isEmpty() || words2.isEmpty()) return 0.0
 
         val intersection = words1.intersect(words2).size
         val union = words1.union(words2).size
-
         return intersection.toDouble() / union.toDouble()
     }
 
-    /**
-     * 将文本分词为 token 集合。
-     *
-     * 转为小写后按非单词字符切分，并过滤掉长度小于等于 1 的 token。
-     */
     internal fun tokenize(text: String): Set<String> {
-        return text.lowercase()
-            .split(Regex("\\W+"))
-            .filter { it.length > 1 }
+        val normalized = text.lowercase()
+        val asciiTokens = normalized
+            .split(Regex("[^a-z0-9]+"))
+            .mapNotNull { it.toSearchTokenOrNull() }
+        return (asciiTokens + keywordTagsFromText(normalized)).toSet()
+    }
+
+    private fun Item.identitySignalTags(): Set<String> {
+        return expandTags(tags + tokenize(name) + tokenize(description))
+    }
+
+    private fun Item.wantedSignalTags(): Set<String> {
+        return expandTags(wantedTags + tokenize(wantedItemName))
+    }
+
+    private fun expandTags(tags: Collection<String>): Set<String> {
+        val result = linkedSetOf<String>()
+        tags.forEach { raw ->
+            val tag = raw.trim().lowercase()
+            if (tag.isBlank()) return@forEach
+            result += tag
+            result += tag.phraseTokens()
+            result += keywordTagsFromText(tag)
+            result += TAG_ALIASES[tag].orEmpty()
+            tag.phraseTokens().forEach { token ->
+                result += TAG_ALIASES[token].orEmpty()
+            }
+        }
+        return result
+    }
+
+    private fun keywordTagsFromText(text: String): Set<String> {
+        val lower = text.lowercase()
+        val result = linkedSetOf<String>()
+        KEYWORD_TAGS.forEach { (keyword, tags) ->
+            if (lower.contains(keyword)) {
+                result += tags
+            }
+        }
+        return result
+    }
+
+    private fun String.phraseTokens(): Set<String> {
+        return split(Regex("[^a-z0-9]+"))
+            .mapNotNull { it.toSearchTokenOrNull() }
             .toSet()
     }
+
+    private fun String.toSearchTokenOrNull(): String? {
+        val token = trim().lowercase()
+        if (token.length <= 1) return null
+        return when (token) {
+            "mice" -> "mouse"
+            "calculators" -> "calculator"
+            "keyboards" -> "keyboard"
+            "earbuds", "earphones" -> "earphone"
+            "headphones" -> "headphone"
+            "electronics", "electronic" -> "electronics"
+            "peripherals" -> "peripheral"
+            "computers" -> "computer"
+            "books" -> "book"
+            "textbooks" -> "textbook"
+            "bicycles", "bikes" -> "bike"
+            else -> token
+        }
+    }
 }
+
+private val TAG_ALIASES: Map<String, Set<String>> = mapOf(
+    "鼠标" to setOf("mouse", "computer", "electronics", "peripheral"),
+    "mouse" to setOf("鼠标", "computer", "electronics", "peripheral"),
+    "mice" to setOf("mouse", "鼠标", "computer", "electronics", "peripheral"),
+    "计算器" to setOf("calculator", "electronics", "study", "math", "stationery"),
+    "calculator" to setOf("计算器", "electronics", "study", "math", "stationery"),
+    "calculators" to setOf("calculator", "计算器", "electronics", "study", "math", "stationery"),
+    "键盘" to setOf("keyboard", "computer", "electronics", "peripheral"),
+    "keyboard" to setOf("键盘", "computer", "electronics", "peripheral"),
+    "耳机" to setOf("earphones", "headphones", "bluetooth", "audio"),
+    "蓝牙耳机" to setOf("earphones", "headphones", "bluetooth", "audio"),
+    "earphone" to setOf("earphones", "headphones", "bluetooth", "audio"),
+    "earphones" to setOf("earphone", "headphones", "bluetooth", "audio"),
+    "headphone" to setOf("headphones", "earphones", "bluetooth", "audio"),
+    "headphones" to setOf("headphone", "earphones", "bluetooth", "audio"),
+    "书" to setOf("book", "textbook", "study", "education"),
+    "教材" to setOf("book", "textbook", "study", "education"),
+    "book" to setOf("书", "textbook", "study", "education"),
+    "textbook" to setOf("教材", "book", "study", "education"),
+    "自行车" to setOf("bicycle", "bike", "transport", "sports"),
+    "bike" to setOf("bicycle", "自行车", "transport", "sports"),
+    "bicycle" to setOf("bike", "自行车", "transport", "sports")
+)
+
+private val KEYWORD_TAGS: Map<String, Set<String>> = mapOf(
+    "鼠标" to TAG_ALIASES.getValue("鼠标"),
+    "mouse" to TAG_ALIASES.getValue("mouse"),
+    "计算器" to TAG_ALIASES.getValue("计算器"),
+    "calculator" to TAG_ALIASES.getValue("calculator"),
+    "键盘" to TAG_ALIASES.getValue("键盘"),
+    "keyboard" to TAG_ALIASES.getValue("keyboard"),
+    "耳机" to TAG_ALIASES.getValue("耳机"),
+    "headphone" to TAG_ALIASES.getValue("headphones"),
+    "earphone" to TAG_ALIASES.getValue("earphones"),
+    "教材" to TAG_ALIASES.getValue("教材"),
+    "book" to TAG_ALIASES.getValue("book"),
+    "自行车" to TAG_ALIASES.getValue("自行车"),
+    "bike" to TAG_ALIASES.getValue("bike"),
+    "bicycle" to TAG_ALIASES.getValue("bicycle")
+)

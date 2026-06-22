@@ -15,12 +15,15 @@ class SeedDataInitializer @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true }
 
     suspend fun seedBarterItemsIfNeeded() {
-        val itemDao = database.itemDao()
-        if (itemDao.getItemById(SEED_ITEM_PREFIX + "airpods") != null) return
-
         val userDao = database.userDao()
         seedUsers().forEach { userDao.insertUser(it) }
-        seedItems().forEach { itemDao.insertItem(it) }
+
+        val itemDao = database.itemDao()
+        seedItems().forEach { item ->
+            if (itemDao.getItemById(item.id) == null) {
+                itemDao.insertItem(item)
+            }
+        }
     }
 
     private fun seedUsers(): List<UserEntity> {
@@ -31,7 +34,9 @@ class SeedDataInitializer @Inject constructor(
             UserEntity("seed-user-c", "13800000003", "陈同学", null, null, "教学楼A", baseTime + 2_000),
             UserEntity("seed-user-d", "13800000004", "许同学", null, null, "西区操场", baseTime + 3_000),
             UserEntity("seed-user-e", "13800000005", "王同学", null, null, "实验楼", baseTime + 4_000),
-            UserEntity("seed-user-f", "13800000006", "赵同学", null, null, "南区食堂", baseTime + 5_000)
+            UserEntity("seed-user-f", "13800000006", "赵同学", null, null, "南区食堂", baseTime + 5_000),
+            UserEntity("seed-user-g", "13800000007", "孙同学", null, null, "计算机学院", baseTime + 6_000),
+            UserEntity("seed-user-h", "13800000008", "李同学", null, null, "理学院", baseTime + 7_000)
         )
     }
 
@@ -103,6 +108,28 @@ class SeedDataInitializer @Inject constructor(
                 wantedItemName = "键盘",
                 wantedTags = listOf("keyboard", "wireless", "computer", "peripheral"),
                 createdAt = now - 50_000
+            ),
+            barterItem(
+                id = "mouse-wants-calculator",
+                userId = "seed-user-g",
+                name = "无线鼠标",
+                description = "九成新无线鼠标，适合笔记本和宿舍台式机使用。",
+                price = 50.0,
+                tags = listOf("mouse", "wireless", "computer", "electronics", "peripheral"),
+                wantedItemName = "计算器",
+                wantedTags = listOf("calculator", "electronics", "study", "math", "stationery"),
+                createdAt = now - 60_000
+            ),
+            barterItem(
+                id = "calculator-wants-mouse",
+                userId = "seed-user-h",
+                name = "科学计算器",
+                description = "课程用科学计算器，函数和统计计算正常。",
+                price = 70.0,
+                tags = listOf("calculator", "electronics", "study", "math", "stationery"),
+                wantedItemName = "鼠标",
+                wantedTags = listOf("mouse", "wireless", "computer", "electronics", "peripheral"),
+                createdAt = now - 70_000
             )
         )
     }

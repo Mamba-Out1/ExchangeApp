@@ -3,7 +3,7 @@ package com.example.exchangeapp.domain.matching
 import com.example.exchangeapp.domain.model.Item
 import com.example.exchangeapp.domain.model.ItemStatus
 import com.example.exchangeapp.domain.repository.ItemRepository
-import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -35,7 +35,7 @@ class MatchingSystemImplTest {
 
     private fun item(id: String, tags: List<String>, description: String = "") = Item(
         id = id,
-        userId = "owner",
+        userId = "owner-$id",
         name = id,
         description = description,
         estimatedPrice = 10.0,
@@ -47,10 +47,32 @@ class MatchingSystemImplTest {
         updatedAt = 0L
     )
 
+    private fun barterItem(
+        id: String,
+        name: String,
+        tags: List<String>,
+        wantedItemName: String,
+        wantedTags: List<String>
+    ) = Item(
+        id = id,
+        userId = "owner-$id",
+        name = name,
+        description = "",
+        estimatedPrice = 10.0,
+        images = emptyList(),
+        tags = tags,
+        location = null,
+        status = ItemStatus.AVAILABLE,
+        createdAt = 0L,
+        updatedAt = 0L,
+        wantedItemName = wantedItemName,
+        wantedTags = wantedTags
+    )
+
     private fun system(repo: ItemRepository, now: () -> Long): MatchingSystemImpl {
         return MatchingSystemImpl(
             itemRepository = repo,
-            computationDispatcher = StandardTestDispatcher(),
+            computationDispatcher = Dispatchers.Unconfined,
             timeProvider = now
         )
     }
@@ -134,5 +156,79 @@ class MatchingSystemImplTest {
         val result = sut.getMatchedItems("does-not-exist", 5)
 
         assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `mouse wanting calculator matches calculator wanting mouse`() = runTest {
+        val mouse = barterItem(
+            id = "mouse",
+            name = "无线鼠标",
+            tags = listOf("mouse", "computer", "peripheral"),
+            wantedItemName = "计算器",
+            wantedTags = listOf("calculator", "study", "math")
+        )
+        val calculator = barterItem(
+            id = "calculator",
+            name = "科学计算器",
+            tags = listOf("calculator", "study", "math"),
+            wantedItemName = "鼠标",
+            wantedTags = listOf("mouse", "computer", "peripheral")
+        )
+        val repo = CountingItemRepository(listOf(mouse, calculator))
+        val sut = system(repo, now = { 1_000L })
+
+        val result = sut.getMatchedItems("mouse", 5)
+
+        assertEquals("calculator", result.firstOrNull()?.item?.id)
+        assertTrue(result.first().matchingScore >= MatchingSystemImpl.MIN_MATCHING_THRESHOLD)
+    }
+
+    @Test
+    fun `phrase tags with shared core words can match`() = runTest {
+        val wantedMouse = barterItem(
+            id = "wanted-mouse",
+            name = "calculator",
+            tags = listOf("calculator", "electronic"),
+            wantedItemName = "mouse",
+            wantedTags = listOf("mouse", "computer mouse", "electronic")
+        )
+        val gamingMouse = barterItem(
+            id = "gaming-mouse",
+            name = "gaming mouse",
+            tags = listOf("mouse", "gaming mouse", "electronics"),
+            wantedItemName = "calculator",
+            wantedTags = listOf("calculator", "electronic calculator")
+        )
+        val repo = CountingItemRepository(listOf(wantedMouse, gamingMouse))
+        val sut = system(repo, now = { 1_000L })
+
+        val result = sut.getMatchedItems("wanted-mouse", 5)
+
+        assertEquals("gaming-mouse", result.firstOrNull()?.item?.id)
+        assertTrue(result.first().matchingScore >= MatchingSystemImpl.MIN_MATCHING_THRESHOLD)
+    }
+
+    @Test
+    fun `matching also works when names are chinese and tags are sparse`() = runTest {
+        val mouse = barterItem(
+            id = "mouse",
+            name = "鼠标",
+            tags = listOf("电子产品"),
+            wantedItemName = "计算器",
+            wantedTags = listOf("学习用品")
+        )
+        val calculator = barterItem(
+            id = "calculator",
+            name = "计算器",
+            tags = listOf("学习用品"),
+            wantedItemName = "鼠标",
+            wantedTags = listOf("电子产品")
+        )
+        val repo = CountingItemRepository(listOf(mouse, calculator))
+        val sut = system(repo, now = { 1_000L })
+
+        val result = sut.getMatchedItems("mouse", 5)
+
+        assertEquals("calculator", result.firstOrNull()?.item?.id)
     }
 }
